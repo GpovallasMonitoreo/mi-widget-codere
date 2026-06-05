@@ -6,7 +6,7 @@
     <title>Widget Codere Automático</title>
     <style>
         /* ==========================================
-           ESTILOS CSS (Diseño de la tarjeta)
+           ESTILOS CSS (Diseño general y Posicionamiento)
            ========================================== */
         * {
             margin: 0;
@@ -16,28 +16,62 @@
         }
 
         body {
-            background-color: #008133; /* Fondo verde Codere de prueba */
+            background-color: #000;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
+            overflow: hidden; /* Evita scroll en pantallas de monitoreo */
         }
 
-        /* La caja negra superpuesta (Tu recuadro rojo) */
+        /* Contenedor principal que simula la proporción de la pantalla vertical */
+        .pantalla-display {
+            position: relative;
+            width: 100%;
+            max-width: 1080px; /* Resolución típica de vallas (ajusta según tu hardware) */
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* La imagen de fondo (tu arte limpio) */
+        .fondo-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Asegura que la imagen llene el espacio sin deformarse */
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* La caja del widget dinámico (flotando sobre la imagen) */
         .data-overlay {
-            width: 400px; /* Ancho fijo para la demostración */
+            position: absolute;
+            z-index: 2;
+            
+            /* AJUSTA ESTOS VALORES PARA CUADRAR EL WIDGET EXACTO EN TU ARTE */
+            bottom: 18%; /* Qué tan abajo está el widget */
+            left: 50%;
+            transform: translateX(-50%); /* Centrado perfecto horizontal */
+            width: 85%; /* Ancho de la caja negra */
+            max-width: 500px;
+            
             background-color: rgba(15, 25, 30, 0.95);
-            border-radius: 15px;
-            padding: 25px;
+            border-radius: 20px;
+            padding: 30px;
             color: #FFF;
             box-shadow: 0px 10px 30px rgba(0,0,0,0.5);
         }
 
+        /* ==========================================
+           ESTILOS CSS (Tipografía y colores del Widget)
+           ========================================== */
         .league-title {
             text-align: center;
-            font-size: 18px;
+            font-size: 20px;
             font-weight: bold;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
             letter-spacing: 1px;
             text-transform: uppercase;
         }
@@ -48,14 +82,14 @@
             justify-content: space-between;
             align-items: center;
             border-bottom: 1px solid #333;
-            padding-bottom: 15px;
-            margin-bottom: 15px;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
         }
 
         .team {
             display: flex;
             align-items: center;
-            font-size: 16px;
+            font-size: 18px;
             font-weight: bold;
             text-transform: uppercase;
             width: 35%;
@@ -67,43 +101,44 @@
         }
 
         .dot {
-            width: 15px;
-            height: 15px;
+            width: 18px;
+            height: 18px;
             border-radius: 50%;
-            margin: 0 8px;
+            margin: 0 10px;
             flex-shrink: 0;
         }
         .dot-local { background-color: #FAFF00; }
         .dot-visita { background-color: #FF0000; }
 
         .score-board {
-            font-size: 24px;
+            font-size: 28px;
             font-weight: bold;
             display: flex;
             justify-content: center;
             width: 30%;
         }
         .score-board .separator {
-            margin: 0 10px;
+            margin: 0 12px;
         }
 
         /* Layout de las Cuotas */
         .odds-title {
             text-align: center;
-            font-size: 16px;
-            margin-bottom: 15px;
+            font-size: 18px;
+            margin-bottom: 20px;
         }
 
         .odd-row {
             display: flex;
             justify-content: space-between;
             border-bottom: 1px solid #222;
-            padding: 12px 0;
-            font-size: 14px;
+            padding: 15px 0;
+            font-size: 16px;
             font-weight: bold;
         }
         .odd-row:last-child {
             border-bottom: none;
+            padding-bottom: 0;
         }
 
         .odd-value {
@@ -120,140 +155,148 @@
 </head>
 <body>
 
-    <div class="data-overlay" id="widget-datos">
-        <div id="estado-carga" class="loading">Conectando con Vercel Proxy...</div>
+    <div class="pantalla-display">
         
-        <h3 class="league-title" id="titulo-liga">FÚTBOL - CARGANDO...</h3>
+        <img src="fondo-codere.jpg" alt="Fondo Promocional" class="fondo-img">
 
-        <div class="match-info">
-            <div class="team">
-                <span class="dot dot-local"></span>
-                <span id="equipo-local">---</span>
-            </div>
+        <div class="data-overlay" id="widget-datos">
+            <div id="estado-carga" class="loading">Conectando con Vercel Proxy...</div>
             
-            <div class="score-board">
-                <span id="marcador-local">0</span>
-                <span class="separator">-</span>
-                <span id="marcador-visita">0</span>
+            <h3 class="league-title" id="titulo-liga">FÚTBOL - CARGANDO...</h3>
+
+            <div class="match-info">
+                <div class="team">
+                    <span class="dot dot-local"></span>
+                    <span id="equipo-local">---</span>
+                </div>
+                
+                <div class="score-board">
+                    <span id="marcador-local">0</span>
+                    <span class="separator">-</span>
+                    <span id="marcador-visita">0</span>
+                </div>
+
+                <div class="team right">
+                    <span id="equipo-visita">---</span>
+                    <span class="dot dot-visita"></span>
+                </div>
             </div>
 
-            <div class="team right">
-                <span id="equipo-visita">---</span>
-                <span class="dot dot-visita"></span>
+            <div class="odds-section">
+                <h4 class="odds-title">OPCIONES DE APUESTA</h4>
+                
+                <div class="odd-row">
+                    <span id="label-gana-local">GANA LOCAL</span>
+                    <span class="odd-value" id="cuota-local">0.00</span>
+                </div>
+                <div class="odd-row">
+                    <span>EMPATE</span>
+                    <span class="odd-value" id="cuota-empate">0.00</span>
+                </div>
+                <div class="odd-row">
+                    <span id="label-gana-visita">GANA VISITA</span>
+                    <span class="odd-value" id="cuota-visita">0.00</span>
+                </div>
             </div>
         </div>
 
-        <div class="odds-section">
-            <h4 class="odds-title">OPCIONES DE APUESTA</h4>
-            
-            <div class="odd-row">
-                <span id="label-gana-local">GANA LOCAL</span>
-                <span class="odd-value" id="cuota-local">0.00</span>
-            </div>
-            <div class="odd-row">
-                <span>EMPATE</span>
-                <span class="odd-value" id="cuota-empate">0.00</span>
-            </div>
-            <div class="odd-row">
-                <span id="label-gana-visita">GANA VISITA</span>
-                <span class="odd-value" id="cuota-visita">0.00</span>
-            </div>
-        </div>
     </div>
 
     <script>
-        // Nueva función de ayuda que pasa a través de Vercel (evitando CORS)
+        // Función de conexión al proxy en Vercel
         async function fetchCodere(endpoint) {
             try {
-                // Pasamos la ruta de Codere como parámetro a nuestro propio proxy
                 const response = await fetch(`/api/proxy?endpoint=${encodeURIComponent(endpoint)}`);
+                if (response.status === 204) return null; 
                 
-                if (response.status === 204) return null; // API cargando datos
-                if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
-                
-                return await response.json();
+                const data = await response.json();
+                if (!response.ok) {
+                    console.error("Error de Codere:", data);
+                    throw new Error(`Codere Status: ${response.status}`);
+                }
+                return data;
             } catch (error) {
                 console.error(`Error en ${endpoint}:`, error);
-                return null;
+                throw error; 
             }
         }
 
-        // Función principal que hace el flujo automático
+        // Función principal con el buscador inteligente
         async function actualizarDatosSolos() {
             const estadoCarga = document.getElementById('estado-carga');
             
             try {
                 estadoCarga.style.display = 'block';
 
-                // PASO 1: Buscar Fútbol (GET /sports)
+                // PASO 1: Buscar Fútbol
                 estadoCarga.innerText = "Buscando Deportes...";
                 const deportes = await fetchCodere('/sports');
-                if (!deportes) throw new Error("Fallo de conexión inicial o API en actualización.");
+                if (!deportes) throw new Error("Fallo de conexión o API en actualización.");
                 
                 const futbol = deportes.find(d => d.Name === "Fútbol" || d.Name === "Soccer");
                 if (!futbol) throw new Error("No se encontró el deporte Fútbol.");
 
-                // PASO 2: Buscar Ligas (GET /sports/{id}/leagues)
+                // PASO 2: Buscar Ligas
                 estadoCarga.innerText = "Buscando Ligas...";
                 const ligas = await fetchCodere(`/sports/${futbol.NodeId}/leagues`);
-                
-                // Intenta buscar Liga MX, si no hay, toma la primera disponible con eventos
-                let ligaSeleccionada = ligas.find(l => l.Name.toUpperCase().includes("LIGA MX"));
-                if (!ligaSeleccionada && ligas.length > 0) ligaSeleccionada = ligas[0]; 
-                if (!ligaSeleccionada) throw new Error("No se encontraron ligas de fútbol disponibles.");
+                if (!ligas || ligas.length === 0) throw new Error("No hay ligas disponibles.");
 
-                // PASO 3: Buscar Partidos de esa Liga (GET /leagues/{id}/liveEvents)
-                estadoCarga.innerText = "Buscando Partidos...";
-                let eventos = await fetchCodere(`/leagues/${ligaSeleccionada.NodeId}/liveEvents`);
+                // PASO 3: Buscador inteligente de partidos con prioridad a Liga MX
+                estadoCarga.innerText = "Buscando partidos activos...";
                 
-                // Si no hay partidos en vivo, buscamos los próximos (nonLiveEvents)
-                if (!eventos || eventos.length === 0) {
-                    eventos = await fetchCodere(`/leagues/${ligaSeleccionada.NodeId}/nonLiveEvents`);
+                let ligaConEventos = null;
+                let eventos = [];
+
+                let ligasPrioritarias = ligas.filter(l => l.Name.toUpperCase().includes("LIGA MX"));
+                let restoDeLigas = ligas.filter(l => !l.Name.toUpperCase().includes("LIGA MX"));
+                let ligasAExplorar = [...ligasPrioritarias, ...restoDeLigas];
+
+                for (let liga of ligasAExplorar) {
+                    eventos = await fetchCodere(`/leagues/${liga.NodeId}/liveEvents`);
+                    if (!eventos || eventos.length === 0) {
+                        eventos = await fetchCodere(`/leagues/${liga.NodeId}/nonLiveEvents`);
+                    }
+                    if (eventos && eventos.length > 0) {
+                        ligaConEventos = liga;
+                        break; 
+                    }
                 }
 
-                if (!eventos || eventos.length === 0) throw new Error("No hay partidos activos en esta liga.");
+                if (!ligaConEventos || eventos.length === 0) {
+                    throw new Error("No hay partidos activos en ninguna liga en este momento.");
+                }
 
-                // Tomamos el primer partido disponible de la lista
+                // PASO 4: Extraer información del partido
                 const partidoActual = eventos[0];
-
-                // PASO 4: Extraer los nombres de los equipos
                 const equipos = partidoActual.Name.split(" - ");
-                const nombreLocal = equipos[0] ? equipos[0].substring(0, 12) : "LOCAL"; 
-                const nombreVisita = equipos[1] ? equipos[1].substring(0, 12) : "VISITA";
+                const nombreLocal = equipos[0] ? equipos[0].substring(0, 15) : "LOCAL"; 
+                const nombreVisita = equipos[1] ? equipos[1].substring(0, 15) : "VISITA";
 
-                // PASO 5: Buscar las Cuotas (GET /events/{id})
+                // PASO 5: Extraer cuotas del mercado 1X2
                 estadoCarga.innerText = "Calculando Cuotas...";
                 const detallesEvento = await fetchCodere(`/events/${partidoActual.NodeId}`);
-                
-                // Buscamos el GameType 1 (Resultado Final 1X2)
                 const mercado1x2 = detallesEvento.Games.find(g => g.GameType === 1);
                 
                 let cuotaL = "N/D", cuotaE = "N/D", cuotaV = "N/D";
 
                 if (mercado1x2 && mercado1x2.Results.length >= 3) {
-                    // Los resultados vienen ordenados: [0]=Local, [1]=Empate, [2]=Visita
                     cuotaL = mercado1x2.Results[0].Odds.toFixed(2);
                     cuotaE = mercado1x2.Results[1].Odds.toFixed(2);
                     cuotaV = mercado1x2.Results[2].Odds.toFixed(2);
                 }
 
-                // PASO 6: INYECTAR DATOS EN EL DOM
-                document.getElementById('titulo-liga').innerText = `FÚTBOL - ${ligaSeleccionada.Name.toUpperCase()}`;
-                
+                // PASO 6: Actualizar Interfaz
+                document.getElementById('titulo-liga').innerText = `FÚTBOL - ${ligaConEventos.Name.toUpperCase()}`;
                 document.getElementById('equipo-local').innerText = nombreLocal.toUpperCase();
                 document.getElementById('equipo-visita').innerText = nombreVisita.toUpperCase();
-                
                 document.getElementById('marcador-local').innerText = partidoActual.HomeScore || "0";
                 document.getElementById('marcador-visita').innerText = partidoActual.AwayScore || "0";
-
                 document.getElementById('label-gana-local').innerText = `GANA ${nombreLocal.toUpperCase()}`;
                 document.getElementById('label-gana-visita').innerText = `GANA ${nombreVisita.toUpperCase()}`;
-                
                 document.getElementById('cuota-local').innerText = cuotaL;
                 document.getElementById('cuota-empate').innerText = cuotaE;
                 document.getElementById('cuota-visita').innerText = cuotaV;
 
-                // Ocultar mensaje de carga
                 estadoCarga.style.display = 'none';
 
             } catch (error) {
@@ -263,10 +306,10 @@
             }
         }
 
-        // Ejecutar inmediatamente al cargar la página
+        // Ejecutar al iniciar
         actualizarDatosSolos();
 
-        // Actualizar automáticamente cada 30 segundos (ideal para pantallas que quedan estáticas)
+        // Refresco cada 30 segundos
         setInterval(actualizarDatosSolos, 30000);
 
     </script>
