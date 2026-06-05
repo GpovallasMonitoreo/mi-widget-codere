@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Widget Codere Automático</title>
+    <title>Tablero Codere en Vivo</title>
     <style>
         /* ==========================================
            ESTILOS CSS (Diseño general y Posicionamiento)
@@ -12,67 +12,65 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: Arial, sans-serif;
+            font-family: 'Arial', sans-serif;
         }
 
         body {
-            background-color: #000;
+            background-color: #111;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
-            overflow: hidden; /* Evita scroll en pantallas de monitoreo */
+            overflow: hidden; /* Evita scroll en la pantalla del tótem */
         }
 
-        /* Contenedor principal que simula la proporción de la pantalla vertical */
+        /* Contenedor principal con las medidas exactas solicitadas (325x960) */
         .pantalla-display {
             position: relative;
-            width: 100%;
-            max-width: 1080px; /* Resolución típica de vallas (ajusta según tu hardware) */
-            height: 100vh;
-            display: flex;
-            justify-content: center;
+            width: 325px; 
+            height: 960px;
+            background-color: #000;
+            overflow: hidden;
+            box-shadow: 0px 0px 20px rgba(0,0,0,0.5); /* Sombra para resaltar en pruebas web */
         }
 
-        /* La imagen de fondo (tu arte limpio) */
+        /* La imagen de fondo jalada desde Supabase */
         .fondo-img {
             width: 100%;
             height: 100%;
-            object-fit: cover; /* Asegura que la imagen llene el espacio sin deformarse */
+            object-fit: cover; 
             position: absolute;
             top: 0;
             left: 0;
             z-index: 1;
         }
 
-        /* La caja del widget dinámico (flotando sobre la imagen) */
+        /* La caja del widget dinámico (flotando exactamente en tu recuadro rojo) */
         .data-overlay {
             position: absolute;
             z-index: 2;
             
-            /* AJUSTA ESTOS VALORES PARA CUADRAR EL WIDGET EXACTO EN TU ARTE */
-            bottom: 18%; /* Qué tan abajo está el widget */
+            /* Ajuste vertical y horizontal para caer en el espacio vacío */
+            top: 59%; 
             left: 50%;
-            transform: translateX(-50%); /* Centrado perfecto horizontal */
-            width: 85%; /* Ancho de la caja negra */
-            max-width: 500px;
+            transform: translateX(-50%); 
+            width: 88%; /* Deja un margen natural a los lados */
             
             background-color: rgba(15, 25, 30, 0.95);
-            border-radius: 20px;
-            padding: 30px;
+            border-radius: 12px;
+            padding: 15px; /* Reducido para la resolución estrecha */
             color: #FFF;
-            box-shadow: 0px 10px 30px rgba(0,0,0,0.5);
         }
 
         /* ==========================================
-           ESTILOS CSS (Tipografía y colores del Widget)
+           ESTILOS CSS (Tipografía adaptada a 325px de ancho)
            ========================================== */
         .league-title {
             text-align: center;
-            font-size: 20px;
+            font-size: 13px; /* Escala reducida */
             font-weight: bold;
-            margin-bottom: 25px;
-            letter-spacing: 1px;
+            margin-bottom: 15px;
+            letter-spacing: 0.5px;
             text-transform: uppercase;
         }
 
@@ -82,17 +80,17 @@
             justify-content: space-between;
             align-items: center;
             border-bottom: 1px solid #333;
-            padding-bottom: 20px;
-            margin-bottom: 20px;
+            padding-bottom: 12px;
+            margin-bottom: 12px;
         }
 
         .team {
             display: flex;
             align-items: center;
-            font-size: 18px;
+            font-size: 11px;
             font-weight: bold;
             text-transform: uppercase;
-            width: 35%;
+            width: 38%;
         }
 
         .team.right {
@@ -101,39 +99,40 @@
         }
 
         .dot {
-            width: 18px;
-            height: 18px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
-            margin: 0 10px;
+            margin: 0 5px;
             flex-shrink: 0;
         }
         .dot-local { background-color: #FAFF00; }
         .dot-visita { background-color: #FF0000; }
 
         .score-board {
-            font-size: 28px;
+            font-size: 18px;
             font-weight: bold;
             display: flex;
             justify-content: center;
-            width: 30%;
+            width: 24%;
         }
         .score-board .separator {
-            margin: 0 12px;
+            margin: 0 5px;
         }
 
         /* Layout de las Cuotas */
         .odds-title {
             text-align: center;
-            font-size: 18px;
-            margin-bottom: 20px;
+            font-size: 12px;
+            margin-bottom: 10px;
+            color: #ccc;
         }
 
         .odd-row {
             display: flex;
             justify-content: space-between;
             border-bottom: 1px solid #222;
-            padding: 15px 0;
-            font-size: 16px;
+            padding: 8px 0;
+            font-size: 11px;
             font-weight: bold;
         }
         .odd-row:last-child {
@@ -143,12 +142,13 @@
 
         .odd-value {
             color: #FFF;
+            font-size: 12px;
         }
         
         .loading {
             text-align: center;
             color: #FAFF00;
-            font-size: 14px;
+            font-size: 12px;
             margin-bottom: 10px;
         }
     </style>
@@ -157,10 +157,10 @@
 
     <div class="pantalla-display">
         
-        <img src="fondo-codere.jpg" alt="Fondo Promocional" class="fondo-img">
+        <img src="https://jxwdncxtnhmrufvdxuti.supabase.co/storage/v1/object/public/banners-publicos/WhatsApp%20Image%202026-06-05%20at%2012.17.23%20PM.jpeg" alt="Fondo Promocional" class="fondo-img">
 
         <div class="data-overlay" id="widget-datos">
-            <div id="estado-carga" class="loading">Conectando con Vercel Proxy...</div>
+            <div id="estado-carga" class="loading">Sincronizando datos...</div>
             
             <h3 class="league-title" id="titulo-liga">FÚTBOL - CARGANDO...</h3>
 
@@ -203,7 +203,6 @@
     </div>
 
     <script>
-        // Función de conexión al proxy en Vercel
         async function fetchCodere(endpoint) {
             try {
                 const response = await fetch(`/api/proxy?endpoint=${encodeURIComponent(endpoint)}`);
@@ -221,29 +220,24 @@
             }
         }
 
-        // Función principal con el buscador inteligente
         async function actualizarDatosSolos() {
             const estadoCarga = document.getElementById('estado-carga');
             
             try {
                 estadoCarga.style.display = 'block';
 
-                // PASO 1: Buscar Fútbol
-                estadoCarga.innerText = "Buscando Deportes...";
+                // Buscar Fútbol
                 const deportes = await fetchCodere('/sports');
-                if (!deportes) throw new Error("Fallo de conexión o API en actualización.");
+                if (!deportes) throw new Error("Conectando con servidor...");
                 
                 const futbol = deportes.find(d => d.Name === "Fútbol" || d.Name === "Soccer");
-                if (!futbol) throw new Error("No se encontró el deporte Fútbol.");
+                if (!futbol) throw new Error("Deporte no disponible.");
 
-                // PASO 2: Buscar Ligas
-                estadoCarga.innerText = "Buscando Ligas...";
+                // Buscar Ligas
                 const ligas = await fetchCodere(`/sports/${futbol.NodeId}/leagues`);
-                if (!ligas || ligas.length === 0) throw new Error("No hay ligas disponibles.");
+                if (!ligas || ligas.length === 0) throw new Error("Sin ligas activas.");
 
-                // PASO 3: Buscador inteligente de partidos con prioridad a Liga MX
-                estadoCarga.innerText = "Buscando partidos activos...";
-                
+                // Buscador inteligente con prioridad Liga MX
                 let ligaConEventos = null;
                 let eventos = [];
 
@@ -263,17 +257,16 @@
                 }
 
                 if (!ligaConEventos || eventos.length === 0) {
-                    throw new Error("No hay partidos activos en ninguna liga en este momento.");
+                    throw new Error("Sin partidos programados.");
                 }
 
-                // PASO 4: Extraer información del partido
+                // Extraer información del partido (Acortado a 12 caracteres por el ancho de la pantalla)
                 const partidoActual = eventos[0];
                 const equipos = partidoActual.Name.split(" - ");
-                const nombreLocal = equipos[0] ? equipos[0].substring(0, 15) : "LOCAL"; 
-                const nombreVisita = equipos[1] ? equipos[1].substring(0, 15) : "VISITA";
+                const nombreLocal = equipos[0] ? equipos[0].substring(0, 12).trim() : "LOCAL"; 
+                const nombreVisita = equipos[1] ? equipos[1].substring(0, 12).trim() : "VISITA";
 
-                // PASO 5: Extraer cuotas del mercado 1X2
-                estadoCarga.innerText = "Calculando Cuotas...";
+                // Extraer cuotas
                 const detallesEvento = await fetchCodere(`/events/${partidoActual.NodeId}`);
                 const mercado1x2 = detallesEvento.Games.find(g => g.GameType === 1);
                 
@@ -285,7 +278,7 @@
                     cuotaV = mercado1x2.Results[2].Odds.toFixed(2);
                 }
 
-                // PASO 6: Actualizar Interfaz
+                // Inyectar en Interfaz
                 document.getElementById('titulo-liga').innerText = `FÚTBOL - ${ligaConEventos.Name.toUpperCase()}`;
                 document.getElementById('equipo-local').innerText = nombreLocal.toUpperCase();
                 document.getElementById('equipo-visita').innerText = nombreVisita.toUpperCase();
@@ -306,11 +299,9 @@
             }
         }
 
-        // Ejecutar al iniciar
+        // Arranque y loop
         actualizarDatosSolos();
-
-        // Refresco cada 30 segundos
-        setInterval(actualizarDatosSolos, 30000);
+        setInterval(actualizarDatosSolos, 30000); // 30 segundos
 
     </script>
 </body>
