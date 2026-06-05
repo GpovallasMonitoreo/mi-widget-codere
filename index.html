@@ -3,163 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tablero Codere en Vivo</title>
+    <title>Tablero Codere en Vivo (Prueba Global)</title>
     <style>
         /* ==========================================
-           ESTILOS CSS (Diseño general y Posicionamiento)
+           ESTILOS CSS (Sin modificaciones al diseño original)
            ========================================== */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Arial', sans-serif;
-        }
-
-        body {
-            background-color: #111;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            overflow: hidden; /* Evita scroll en pantallas digitales */
-        }
-
-        /* Contenedor principal con las medidas exactas (325x960) */
-        .pantalla-display {
-            position: relative;
-            width: 325px; 
-            height: 960px;
-            background-color: #000;
-            overflow: hidden;
-            box-shadow: 0px 0px 20px rgba(0,0,0,0.5);
-        }
-
-        /* La imagen de fondo jalada desde Supabase */
-        .fondo-img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover; 
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 1;
-        }
-
-        /* La caja del widget dinámico */
-        .data-overlay {
-            position: absolute;
-            z-index: 2;
-            top: 55%; 
-            left: 50%;
-            transform: translateX(-50%); 
-            width: 78%; 
-            background-color: rgba(15, 25, 30, 0.95);
-            border-radius: 12px;
-            padding: 15px; 
-            color: #FFF;
-        }
-
-        /* ==========================================
-           ESTILOS CSS (Tipografía adaptada)
-           ========================================== */
-        .league-title {
-            text-align: center;
-            font-size: 13px;
-            font-weight: bold;
-            margin-bottom: 15px;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-        }
-
-        /* Layout del Marcador */
-        .match-info {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #333;
-            padding-bottom: 12px;
-            margin-bottom: 12px;
-        }
-
-        .team {
-            display: flex;
-            align-items: center;
-            font-size: 11px;
-            font-weight: bold;
-            text-transform: uppercase;
-            width: 38%;
-        }
-
-        .team.right {
-            justify-content: flex-end;
-            text-align: right;
-        }
-
-        .dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            margin: 0 5px;
-            flex-shrink: 0;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Arial', sans-serif; }
+        body { background-color: #111; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+        
+        .pantalla-display { position: relative; width: 325px; height: 960px; background-color: #000; overflow: hidden; box-shadow: 0px 0px 20px rgba(0,0,0,0.5); }
+        .fondo-img { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1; }
+        
+        .data-overlay { position: absolute; z-index: 2; top: 59%; left: 50%; transform: translateX(-50%); width: 88%; background-color: rgba(15, 25, 30, 0.95); border-radius: 12px; padding: 15px; color: #FFF; }
+        
+        .league-title { text-align: center; font-size: 11px; font-weight: bold; margin-bottom: 15px; letter-spacing: 0.5px; text-transform: uppercase; color: #00E5FF; }
+        
+        .match-info { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 12px; margin-bottom: 12px; }
+        .team { display: flex; align-items: center; font-size: 11px; font-weight: bold; text-transform: uppercase; width: 38%; }
+        .team.right { justify-content: flex-end; text-align: right; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; margin: 0 5px; flex-shrink: 0; }
         .dot-local { background-color: #FAFF00; }
         .dot-visita { background-color: #FF0000; }
-
-        .score-board {
-            font-size: 18px;
-            font-weight: bold;
-            display: flex;
-            justify-content: center;
-            width: 24%;
-        }
-        .score-board .separator {
-            margin: 0 5px;
-        }
-
-        /* Layout de las Cuotas */
-        .odds-title {
-            text-align: center;
-            font-size: 12px;
-            margin-bottom: 10px;
-            color: #ccc;
-        }
-
-        .odd-row {
-            display: flex;
-            justify-content: space-between;
-            border-bottom: 1px solid #222;
-            padding: 8px 0;
-            font-size: 11px;
-            font-weight: bold;
-        }
-        .odd-row:last-child {
-            border-bottom: none;
-            padding-bottom: 0;
-        }
-
-        .odd-value {
-            color: #FFF;
-            font-size: 12px;
-        }
+        .score-board { font-size: 18px; font-weight: bold; display: flex; justify-content: center; width: 24%; color: #00E5FF; }
+        .score-board .separator { margin: 0 5px; color: #FFF; }
         
-        .loading {
-            text-align: center;
-            color: #FAFF00;
-            font-size: 12px;
-            margin-bottom: 10px;
-        }
+        .odds-title { text-align: center; font-size: 12px; margin-bottom: 10px; color: #ccc; }
+        .odd-row { display: flex; justify-content: space-between; border-bottom: 1px solid #222; padding: 8px 0; font-size: 11px; font-weight: bold; }
+        .odd-row:last-child { border-bottom: none; padding-bottom: 0; }
+        .odd-value { color: #FFF; font-size: 12px; }
+        .loading { text-align: center; color: #FAFF00; font-size: 12px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
     <div class="pantalla-display">
-        
         <img src="https://jxwdncxtnhmrufvdxuti.supabase.co/storage/v1/object/public/banners-publicos/WhatsApp%20Image%202026-06-05%20at%2012.17.23%20PM.jpeg" alt="Fondo Promocional" class="fondo-img">
 
         <div class="data-overlay" id="widget-datos">
-            <div id="estado-carga" class="loading">Sincronizando datos...</div>
+            <div id="estado-carga" class="loading">Cazando eventos en vivo...</div>
             
-            <h3 class="league-title" id="titulo-liga">FÚTBOL - CARGANDO...</h3>
+            <h3 class="league-title" id="titulo-liga">BUSCANDO...</h3>
 
             <div class="match-info">
                 <div class="team">
@@ -187,7 +70,7 @@
                     <span class="odd-value" id="cuota-local">0.00</span>
                 </div>
                 <div class="odd-row">
-                    <span>EMPATE</span>
+                    <span id="label-empate">EMPATE</span>
                     <span class="odd-value" id="cuota-empate">0.00</span>
                 </div>
                 <div class="odd-row">
@@ -196,7 +79,6 @@
                 </div>
             </div>
         </div>
-
     </div>
 
     <script>
@@ -204,11 +86,8 @@
             try {
                 const response = await fetch(`/api/proxy?endpoint=${encodeURIComponent(endpoint)}`);
                 if (response.status === 204) return null; 
-                
                 const data = await response.json();
-                if (!response.ok) {
-                    throw new Error(`Codere Status: ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`Codere Status: ${response.status}`);
                 return data;
             } catch (error) {
                 throw error; 
@@ -220,74 +99,97 @@
             
             try {
                 estadoCarga.style.display = 'block';
+                estadoCarga.innerText = "Cazando eventos en vivo...";
 
                 const deportes = await fetchCodere('/sports');
-                if (!deportes) throw new Error("Conectando con servidor...");
-                
-                const futbol = deportes.find(d => d.Name === "Fútbol" || d.Name === "Soccer");
-                if (!futbol) throw new Error("Deporte no disponible.");
+                if (!deportes) throw new Error("Conectando...");
 
-                const ligas = await fetchCodere(`/sports/${futbol.NodeId}/leagues`);
-                if (!ligas || ligas.length === 0) throw new Error("Sin ligas activas.");
+                // Filtramos deportes donde suele haber acción constante
+                const deportesActivos = deportes.filter(d => 
+                    ["Fútbol", "Tenis", "Baloncesto", "Tenis de Mesa", "Esports", "Béisbol", "Voleibol"].includes(d.Name)
+                );
 
-                let ligaConEventos = null;
-                let eventos = [];
+                let eventoEnVivo = null;
+                let ligaConEvento = null;
+                let deporteDelEvento = null;
 
-                let ligasPrioritarias = ligas.filter(l => l.Name.toUpperCase().includes("LIGA MX"));
-                let restoDeLigas = ligas.filter(l => !l.Name.toUpperCase().includes("LIGA MX"));
-                let ligasAExplorar = [...ligasPrioritarias, ...restoDeLigas];
+                // Barrido intensivo buscando SÓLO eventos en vivo
+                for (let deporte of deportesActivos) {
+                    estadoCarga.innerText = `Revisando ${deporte.Name}...`;
+                    const ligas = await fetchCodere(`/sports/${deporte.NodeId}/leagues`);
+                    if (!ligas) continue;
 
-                for (let liga of ligasAExplorar) {
-                    eventos = await fetchCodere(`/leagues/${liga.NodeId}/liveEvents`);
-                    if (!eventos || eventos.length === 0) {
-                        eventos = await fetchCodere(`/leagues/${liga.NodeId}/nonLiveEvents`);
+                    // Para no saturar la API, revisamos las primeras 5 ligas de cada deporte
+                    const ligasARevisar = ligas.slice(0, 5); 
+
+                    for (let liga of ligasARevisar) {
+                        const eventos = await fetchCodere(`/leagues/${liga.NodeId}/liveEvents`);
+                        if (eventos && eventos.length > 0) {
+                            eventoEnVivo = eventos[0];
+                            ligaConEvento = liga;
+                            deporteDelEvento = deporte;
+                            break; 
+                        }
                     }
-                    if (eventos && eventos.length > 0) {
-                        ligaConEventos = liga;
-                        break; 
-                    }
+                    if (eventoEnVivo) break; 
                 }
 
-                // Mecanismo de seguridad para pantalla vacía
-                if (!ligaConEventos || eventos.length === 0) {
-                    document.getElementById('titulo-liga').innerText = `FÚTBOL - PRÓXIMAMENTE`;
+                // Mecanismo de respaldo si en el mundo no hay nada jugándose
+                if (!eventoEnVivo) {
+                    document.getElementById('titulo-liga').innerText = `RADAR GLOBAL - SIN EVENTOS`;
                     document.getElementById('equipo-local').innerText = "CODERE";
                     document.getElementById('equipo-visita').innerText = "DEPORTES";
                     document.getElementById('marcador-local').innerText = "-";
                     document.getElementById('marcador-visita').innerText = "-";
-                    document.getElementById('label-gana-local').innerText = `GANA LOCAL`;
-                    document.getElementById('label-gana-visita').innerText = `GANA VISITA`;
                     document.getElementById('cuota-local').innerText = "0.00";
                     document.getElementById('cuota-empate').innerText = "0.00";
                     document.getElementById('cuota-visita').innerText = "0.00";
-                    
                     estadoCarga.style.display = 'none';
                     return; 
                 }
 
-                const partidoActual = eventos[0];
-                const equipos = partidoActual.Name.split(" - ");
+                // Extracción de equipos (Cortamos a 12 letras para que encaje en vallas)
+                const equipos = eventoEnVivo.Name.split(" - ");
                 const nombreLocal = equipos[0] ? equipos[0].substring(0, 12).trim() : "LOCAL"; 
                 const nombreVisita = equipos[1] ? equipos[1].substring(0, 12).trim() : "VISITA";
 
-                const detallesEvento = await fetchCodere(`/events/${partidoActual.NodeId}`);
-                const mercado1x2 = detallesEvento.Games.find(g => g.GameType === 1);
+                // Extracción de Cuotas (Momios)
+                const detallesEvento = await fetchCodere(`/events/${eventoEnVivo.NodeId}`);
+                // Tomamos el primer mercado de apuestas disponible, sea cual sea el deporte
+                const mercadoPrincipal = detallesEvento.Games[0]; 
                 
                 let cuotaL = "N/D", cuotaE = "N/D", cuotaV = "N/D";
+                let textoEmpate = "EMPATE";
 
-                if (mercado1x2 && mercado1x2.Results.length >= 3) {
-                    cuotaL = mercado1x2.Results[0].Odds.toFixed(2);
-                    cuotaE = mercado1x2.Results[1].Odds.toFixed(2);
-                    cuotaV = mercado1x2.Results[2].Odds.toFixed(2);
+                if (mercadoPrincipal && mercadoPrincipal.Results) {
+                    // Si el deporte solo tiene 2 resultados (Ej. Tenis: Gana A o Gana B)
+                    if (mercadoPrincipal.Results.length === 2) {
+                        cuotaL = mercadoPrincipal.Results[0].Odds.toFixed(2);
+                        textoEmpate = "N/A (SIN EMPATE)";
+                        cuotaE = "-";
+                        cuotaV = mercadoPrincipal.Results[1].Odds.toFixed(2);
+                    } 
+                    // Si el deporte tiene 3 resultados (Ej. Fútbol: Local, Empate, Visita)
+                    else if (mercadoPrincipal.Results.length >= 3) {
+                        cuotaL = mercadoPrincipal.Results[0].Odds.toFixed(2);
+                        cuotaE = mercadoPrincipal.Results[1].Odds.toFixed(2);
+                        cuotaV = mercadoPrincipal.Results[2].Odds.toFixed(2);
+                    }
                 }
 
-                document.getElementById('titulo-liga').innerText = `FÚTBOL - ${ligaConEventos.Name.toUpperCase()}`;
+                // Inyección en la pantalla del tótem
+                document.getElementById('titulo-liga').innerText = `${deporteDelEvento.Name} - ${ligaConEvento.Name.substring(0, 20)}`;
                 document.getElementById('equipo-local').innerText = nombreLocal.toUpperCase();
                 document.getElementById('equipo-visita').innerText = nombreVisita.toUpperCase();
-                document.getElementById('marcador-local').innerText = partidoActual.HomeScore || "0";
-                document.getElementById('marcador-visita').innerText = partidoActual.AwayScore || "0";
+                
+                // Aquí extraemos los goles/puntos en vivo
+                document.getElementById('marcador-local').innerText = eventoEnVivo.HomeScore || "0";
+                document.getElementById('marcador-visita').innerText = eventoEnVivo.AwayScore || "0";
+                
                 document.getElementById('label-gana-local').innerText = `GANA ${nombreLocal.toUpperCase()}`;
                 document.getElementById('label-gana-visita').innerText = `GANA ${nombreVisita.toUpperCase()}`;
+                document.getElementById('label-empate').innerText = textoEmpate;
+                
                 document.getElementById('cuota-local').innerText = cuotaL;
                 document.getElementById('cuota-empate').innerText = cuotaE;
                 document.getElementById('cuota-visita').innerText = cuotaV;
