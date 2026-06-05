@@ -21,17 +21,17 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
-            overflow: hidden; /* Evita scroll en la pantalla del tótem */
+            overflow: hidden; /* Evita scroll en pantallas digitales */
         }
 
-        /* Contenedor principal con las medidas exactas solicitadas (325x960) */
+        /* Contenedor principal con las medidas exactas (325x960) */
         .pantalla-display {
             position: relative;
             width: 325px; 
             height: 960px;
             background-color: #000;
             overflow: hidden;
-            box-shadow: 0px 0px 20px rgba(0,0,0,0.5); /* Sombra para resaltar en pruebas web */
+            box-shadow: 0px 0px 20px rgba(0,0,0,0.5);
         }
 
         /* La imagen de fondo jalada desde Supabase */
@@ -45,29 +45,26 @@
             z-index: 1;
         }
 
-        /* La caja del widget dinámico (flotando exactamente en tu recuadro rojo) */
+        /* La caja del widget dinámico */
         .data-overlay {
             position: absolute;
             z-index: 2;
-            
-            /* Ajuste vertical y horizontal para caer en el espacio vacío */
             top: 59%; 
             left: 50%;
             transform: translateX(-50%); 
-            width: 88%; /* Deja un margen natural a los lados */
-            
+            width: 88%; 
             background-color: rgba(15, 25, 30, 0.95);
             border-radius: 12px;
-            padding: 15px; /* Reducido para la resolución estrecha */
+            padding: 15px; 
             color: #FFF;
         }
 
         /* ==========================================
-           ESTILOS CSS (Tipografía adaptada a 325px de ancho)
+           ESTILOS CSS (Tipografía adaptada)
            ========================================== */
         .league-title {
             text-align: center;
-            font-size: 13px; /* Escala reducida */
+            font-size: 13px;
             font-weight: bold;
             margin-bottom: 15px;
             letter-spacing: 0.5px;
@@ -210,12 +207,10 @@
                 
                 const data = await response.json();
                 if (!response.ok) {
-                    console.error("Error de Codere:", data);
                     throw new Error(`Codere Status: ${response.status}`);
                 }
                 return data;
             } catch (error) {
-                console.error(`Error en ${endpoint}:`, error);
                 throw error; 
             }
         }
@@ -226,18 +221,15 @@
             try {
                 estadoCarga.style.display = 'block';
 
-                // Buscar Fútbol
                 const deportes = await fetchCodere('/sports');
                 if (!deportes) throw new Error("Conectando con servidor...");
                 
                 const futbol = deportes.find(d => d.Name === "Fútbol" || d.Name === "Soccer");
                 if (!futbol) throw new Error("Deporte no disponible.");
 
-                // Buscar Ligas
                 const ligas = await fetchCodere(`/sports/${futbol.NodeId}/leagues`);
                 if (!ligas || ligas.length === 0) throw new Error("Sin ligas activas.");
 
-                // Buscador inteligente con prioridad Liga MX
                 let ligaConEventos = null;
                 let eventos = [];
 
@@ -256,17 +248,28 @@
                     }
                 }
 
+                // Mecanismo de seguridad para pantalla vacía
                 if (!ligaConEventos || eventos.length === 0) {
-                    throw new Error("Sin partidos programados.");
+                    document.getElementById('titulo-liga').innerText = `FÚTBOL - PRÓXIMAMENTE`;
+                    document.getElementById('equipo-local').innerText = "CODERE";
+                    document.getElementById('equipo-visita').innerText = "DEPORTES";
+                    document.getElementById('marcador-local').innerText = "-";
+                    document.getElementById('marcador-visita').innerText = "-";
+                    document.getElementById('label-gana-local').innerText = `GANA LOCAL`;
+                    document.getElementById('label-gana-visita').innerText = `GANA VISITA`;
+                    document.getElementById('cuota-local').innerText = "0.00";
+                    document.getElementById('cuota-empate').innerText = "0.00";
+                    document.getElementById('cuota-visita').innerText = "0.00";
+                    
+                    estadoCarga.style.display = 'none';
+                    return; 
                 }
 
-                // Extraer información del partido (Acortado a 12 caracteres por el ancho de la pantalla)
                 const partidoActual = eventos[0];
                 const equipos = partidoActual.Name.split(" - ");
                 const nombreLocal = equipos[0] ? equipos[0].substring(0, 12).trim() : "LOCAL"; 
                 const nombreVisita = equipos[1] ? equipos[1].substring(0, 12).trim() : "VISITA";
 
-                // Extraer cuotas
                 const detallesEvento = await fetchCodere(`/events/${partidoActual.NodeId}`);
                 const mercado1x2 = detallesEvento.Games.find(g => g.GameType === 1);
                 
@@ -278,7 +281,6 @@
                     cuotaV = mercado1x2.Results[2].Odds.toFixed(2);
                 }
 
-                // Inyectar en Interfaz
                 document.getElementById('titulo-liga').innerText = `FÚTBOL - ${ligaConEventos.Name.toUpperCase()}`;
                 document.getElementById('equipo-local').innerText = nombreLocal.toUpperCase();
                 document.getElementById('equipo-visita').innerText = nombreVisita.toUpperCase();
@@ -294,14 +296,13 @@
 
             } catch (error) {
                 console.error(error);
-                estadoCarga.innerText = error.message;
-                estadoCarga.style.color = "#FF0000";
+                estadoCarga.innerText = "ESPERANDO CONEXIÓN...";
+                estadoCarga.style.color = "#ccc";
             }
         }
 
-        // Arranque y loop
         actualizarDatosSolos();
-        setInterval(actualizarDatosSolos, 30000); // 30 segundos
+        setInterval(actualizarDatosSolos, 30000); 
 
     </script>
 </body>
