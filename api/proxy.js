@@ -1,36 +1,35 @@
-export default async function handler(req, res) {
-    // 1. Configurar las cabeceras CORS para permitir que tu HTML lea la respuesta
+module.exports = async function (req, res) {
+    // 1. Configurar CORS
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*'); 
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Language');
+    res.setHeader('Access-Control-Allow-Headers', '*');
 
-    // Si es una petición de pre-vuelo (Preflight), responder OK
+    // Manejo de la petición Preflight
     if (req.method === 'OPTIONS') {
         res.status(200).end();
         return;
     }
 
-    // 2. Extraer el endpoint que el HTML quiere consultar (ej: /sports)
-    const { endpoint } = req.query;
+    // 2. Capturar el endpoint
+    const endpoint = req.query.endpoint;
 
     if (!endpoint) {
         return res.status(400).json({ error: 'Se requiere un endpoint' });
     }
 
     try {
-        // 3. Hacer la petición real a Codere desde el servidor de Vercel
+        // 3. Consultar a Codere
         const urlCodere = `https://codere-sbs-es.azurewebsites.net/api${endpoint}`;
         
         const response = await fetch(urlCodere, {
             method: 'GET',
             headers: {
-                'Language': 'es-Mx', // Forzamos el idioma para México
+                'Language': 'es-Mx',
                 'Accept': 'application/json'
             }
         });
 
-        // 4. Manejar el caso especial 204 (Codere cargando datos)
         if (response.status === 204) {
             return res.status(204).end();
         }
@@ -39,12 +38,13 @@ export default async function handler(req, res) {
             throw new Error(`Codere respondió con status: ${response.status}`);
         }
 
-        // 5. Devolver los datos al HTML
         const data = await response.json();
+        
+        // 4. Enviar datos al frontend
         res.status(200).json(data);
 
     } catch (error) {
-        console.error("Error en el Proxy:", error);
-        res.status(500).json({ error: 'Error interno del proxy al contactar a Codere' });
+        console.error("Error en el Proxy:", error.message);
+        res.status(500).json({ error: 'Error interno del proxy', detalle: error.message });
     }
-}
+};
