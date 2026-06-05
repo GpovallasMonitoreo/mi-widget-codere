@@ -1,17 +1,14 @@
 module.exports = async function (req, res) {
-    // 1. Configurar CORS
+    // 1. Cabeceras CORS abiertas para que tu HTML pueda leer los datos
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*'); 
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', '*');
 
-    // Manejo de la petición Preflight
     if (req.method === 'OPTIONS') {
-        res.status(200).end();
-        return;
+        return res.status(200).end();
     }
 
-    // 2. Capturar el endpoint
     const endpoint = req.query.endpoint;
 
     if (!endpoint) {
@@ -19,14 +16,18 @@ module.exports = async function (req, res) {
     }
 
     try {
-        // 3. Consultar a Codere
-        const urlCodere = `https://codere-sbs-es.azurewebsites.net/api${endpoint}`;
+        // Aseguramos que el endpoint tenga la diagonal correcta
+        const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
         
+        // URL exacta basada en la documentación de Swagger (sin /api)
+        const urlCodere = `https://codere-sbs-es.azurewebsites.net${cleanEndpoint}`;
+        
+        // Petición clonada de tu cURL de prueba
         const response = await fetch(urlCodere, {
             method: 'GET',
             headers: {
-                'Language': 'es-Mx',
-                'Accept': 'application/json'
+                'accept': '*/*',     // Exacto al Swagger
+                'Language': 'es'     // Exacto al Swagger (Cambiado de es-Mx)
             }
         });
 
@@ -35,16 +36,18 @@ module.exports = async function (req, res) {
         }
 
         if (!response.ok) {
-            throw new Error(`Codere respondió con status: ${response.status}`);
+            const errorText = await response.text();
+            return res.status(response.status).json({ 
+                error: `Rechazo de Codere (Status ${response.status})`, 
+                url_intentada: urlCodere,
+                detalle: errorText 
+            });
         }
 
         const data = await response.json();
-        
-        // 4. Enviar datos al frontend
-        res.status(200).json(data);
+        return res.status(200).json(data);
 
     } catch (error) {
-        console.error("Error en el Proxy:", error.message);
-        res.status(500).json({ error: 'Error interno del proxy', detalle: error.message });
+        return res.status(500).json({ error: 'Fallo interno en Vercel', detalle: error.toString() });
     }
 };
