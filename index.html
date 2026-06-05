@@ -1,52 +1,274 @@
-module.exports = async function (req, res) {
-    // 1. Cabeceras CORS abiertas
-    res.setHeader('Access-Control-Allow-Credentials', true);
-    res.setHeader('Access-Control-Allow-Origin', '*'); 
-    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', '*');
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Widget Codere Automático</title>
+    <style>
+        /* ==========================================
+           ESTILOS CSS (Diseño de la tarjeta)
+           ========================================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
 
-    if (req.method === 'OPTIONS') {
-        return res.status(200).end();
-    }
+        body {
+            background-color: #008133; /* Fondo verde Codere de prueba */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
 
-    const endpoint = req.query.endpoint;
+        /* La caja negra superpuesta (Tu recuadro rojo) */
+        .data-overlay {
+            width: 400px; /* Ancho fijo para la demostración */
+            background-color: rgba(15, 25, 30, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            color: #FFF;
+            box-shadow: 0px 10px 30px rgba(0,0,0,0.5);
+        }
 
-    if (!endpoint) {
-        return res.status(400).json({ error: 'Se requiere un endpoint' });
-    }
+        .league-title {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
 
-    try {
-        // CORRECCIÓN DE URL: Quitamos el "/api" que sobraba basado en tu Swagger
-        // Ahora buscará directamente: https://codere-sbs-es.azurewebsites.net/sports
-        const urlCodere = `https://codere-sbs-es.azurewebsites.net${endpoint}`;
+        /* Layout del Marcador */
+        .match-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #333;
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+        }
+
+        .team {
+            display: flex;
+            align-items: center;
+            font-size: 16px;
+            font-weight: bold;
+            text-transform: uppercase;
+            width: 35%;
+        }
+
+        .team.right {
+            justify-content: flex-end;
+            text-align: right;
+        }
+
+        .dot {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            margin: 0 8px;
+            flex-shrink: 0;
+        }
+        .dot-local { background-color: #FAFF00; }
+        .dot-visita { background-color: #FF0000; }
+
+        .score-board {
+            font-size: 24px;
+            font-weight: bold;
+            display: flex;
+            justify-content: center;
+            width: 30%;
+        }
+        .score-board .separator {
+            margin: 0 10px;
+        }
+
+        /* Layout de las Cuotas */
+        .odds-title {
+            text-align: center;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+
+        .odd-row {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid #222;
+            padding: 12px 0;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .odd-row:last-child {
+            border-bottom: none;
+        }
+
+        .odd-value {
+            color: #FFF;
+        }
         
-        const response = await fetch(urlCodere, {
-            method: 'GET',
-            headers: {
-                'Language': 'es-Mx',
-                'Accept': 'application/json'
+        .loading {
+            text-align: center;
+            color: #FAFF00;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="data-overlay" id="widget-datos">
+        <div id="estado-carga" class="loading">Conectando con Vercel Proxy...</div>
+        
+        <h3 class="league-title" id="titulo-liga">FÚTBOL - CARGANDO...</h3>
+
+        <div class="match-info">
+            <div class="team">
+                <span class="dot dot-local"></span>
+                <span id="equipo-local">---</span>
+            </div>
+            
+            <div class="score-board">
+                <span id="marcador-local">0</span>
+                <span class="separator">-</span>
+                <span id="marcador-visita">0</span>
+            </div>
+
+            <div class="team right">
+                <span id="equipo-visita">---</span>
+                <span class="dot dot-visita"></span>
+            </div>
+        </div>
+
+        <div class="odds-section">
+            <h4 class="odds-title">OPCIONES DE APUESTA</h4>
+            
+            <div class="odd-row">
+                <span id="label-gana-local">GANA LOCAL</span>
+                <span class="odd-value" id="cuota-local">0.00</span>
+            </div>
+            <div class="odd-row">
+                <span>EMPATE</span>
+                <span class="odd-value" id="cuota-empate">0.00</span>
+            </div>
+            <div class="odd-row">
+                <span id="label-gana-visita">GANA VISITA</span>
+                <span class="odd-value" id="cuota-visita">0.00</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Nueva función de ayuda que pasa a través de Vercel (evitando CORS)
+        async function fetchCodere(endpoint) {
+            try {
+                // Pasamos la ruta de Codere como parámetro a nuestro propio proxy
+                const response = await fetch(`/api/proxy?endpoint=${encodeURIComponent(endpoint)}`);
+                
+                if (response.status === 204) return null; // API cargando datos
+                if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
+                
+                return await response.json();
+            } catch (error) {
+                console.error(`Error en ${endpoint}:`, error);
+                return null;
             }
-        });
-
-        if (response.status === 204) {
-            return res.status(204).end();
         }
 
-        // SI CODERE RECHAZA LA PETICIÓN, MANDAMOS EL ERROR EXACTO AL FRONTEND
-        if (!response.ok) {
-            const errorText = await response.text(); // Leemos qué dice Codere
-            return res.status(response.status).json({ 
-                error: `Codere rechazó la petición con status ${response.status}`, 
-                url_intentada: urlCodere,
-                respuesta_codere: errorText 
-            });
+        // Función principal que hace el flujo automático
+        async function actualizarDatosSolos() {
+            const estadoCarga = document.getElementById('estado-carga');
+            
+            try {
+                estadoCarga.style.display = 'block';
+
+                // PASO 1: Buscar Fútbol (GET /sports)
+                estadoCarga.innerText = "Buscando Deportes...";
+                const deportes = await fetchCodere('/sports');
+                if (!deportes) throw new Error("Fallo de conexión inicial o API en actualización.");
+                
+                const futbol = deportes.find(d => d.Name === "Fútbol" || d.Name === "Soccer");
+                if (!futbol) throw new Error("No se encontró el deporte Fútbol.");
+
+                // PASO 2: Buscar Ligas (GET /sports/{id}/leagues)
+                estadoCarga.innerText = "Buscando Ligas...";
+                const ligas = await fetchCodere(`/sports/${futbol.NodeId}/leagues`);
+                
+                // Intenta buscar Liga MX, si no hay, toma la primera disponible con eventos
+                let ligaSeleccionada = ligas.find(l => l.Name.toUpperCase().includes("LIGA MX"));
+                if (!ligaSeleccionada && ligas.length > 0) ligaSeleccionada = ligas[0]; 
+                if (!ligaSeleccionada) throw new Error("No se encontraron ligas de fútbol disponibles.");
+
+                // PASO 3: Buscar Partidos de esa Liga (GET /leagues/{id}/liveEvents)
+                estadoCarga.innerText = "Buscando Partidos...";
+                let eventos = await fetchCodere(`/leagues/${ligaSeleccionada.NodeId}/liveEvents`);
+                
+                // Si no hay partidos en vivo, buscamos los próximos (nonLiveEvents)
+                if (!eventos || eventos.length === 0) {
+                    eventos = await fetchCodere(`/leagues/${ligaSeleccionada.NodeId}/nonLiveEvents`);
+                }
+
+                if (!eventos || eventos.length === 0) throw new Error("No hay partidos activos en esta liga.");
+
+                // Tomamos el primer partido disponible de la lista
+                const partidoActual = eventos[0];
+
+                // PASO 4: Extraer los nombres de los equipos
+                const equipos = partidoActual.Name.split(" - ");
+                const nombreLocal = equipos[0] ? equipos[0].substring(0, 12) : "LOCAL"; 
+                const nombreVisita = equipos[1] ? equipos[1].substring(0, 12) : "VISITA";
+
+                // PASO 5: Buscar las Cuotas (GET /events/{id})
+                estadoCarga.innerText = "Calculando Cuotas...";
+                const detallesEvento = await fetchCodere(`/events/${partidoActual.NodeId}`);
+                
+                // Buscamos el GameType 1 (Resultado Final 1X2)
+                const mercado1x2 = detallesEvento.Games.find(g => g.GameType === 1);
+                
+                let cuotaL = "N/D", cuotaE = "N/D", cuotaV = "N/D";
+
+                if (mercado1x2 && mercado1x2.Results.length >= 3) {
+                    // Los resultados vienen ordenados: [0]=Local, [1]=Empate, [2]=Visita
+                    cuotaL = mercado1x2.Results[0].Odds.toFixed(2);
+                    cuotaE = mercado1x2.Results[1].Odds.toFixed(2);
+                    cuotaV = mercado1x2.Results[2].Odds.toFixed(2);
+                }
+
+                // PASO 6: INYECTAR DATOS EN EL DOM
+                document.getElementById('titulo-liga').innerText = `FÚTBOL - ${ligaSeleccionada.Name.toUpperCase()}`;
+                
+                document.getElementById('equipo-local').innerText = nombreLocal.toUpperCase();
+                document.getElementById('equipo-visita').innerText = nombreVisita.toUpperCase();
+                
+                document.getElementById('marcador-local').innerText = partidoActual.HomeScore || "0";
+                document.getElementById('marcador-visita').innerText = partidoActual.AwayScore || "0";
+
+                document.getElementById('label-gana-local').innerText = `GANA ${nombreLocal.toUpperCase()}`;
+                document.getElementById('label-gana-visita').innerText = `GANA ${nombreVisita.toUpperCase()}`;
+                
+                document.getElementById('cuota-local').innerText = cuotaL;
+                document.getElementById('cuota-empate').innerText = cuotaE;
+                document.getElementById('cuota-visita').innerText = cuotaV;
+
+                // Ocultar mensaje de carga
+                estadoCarga.style.display = 'none';
+
+            } catch (error) {
+                console.error(error);
+                estadoCarga.innerText = error.message;
+                estadoCarga.style.color = "#FF0000";
+            }
         }
 
-        const data = await response.json();
-        return res.status(200).json(data);
+        // Ejecutar inmediatamente al cargar la página
+        actualizarDatosSolos();
 
-    } catch (error) {
-        // Si Node.js falla antes de contactar a Codere
-        return res.status(500).json({ error: 'Fallo interno en Vercel', detalle: error.toString() });
-    }
-};
+        // Actualizar automáticamente cada 30 segundos (ideal para pantallas que quedan estáticas)
+        setInterval(actualizarDatosSolos, 30000);
+
+    </script>
+</body>
+</html>
