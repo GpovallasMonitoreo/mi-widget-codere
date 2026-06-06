@@ -3,11 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tablero Codere en Vivo (Debug Estructura)</title>
+    <title>Tablero Codere en Vivo (Estructura Corregida)</title>
     <style>
-        /* ==========================================
-           ESTILOS CSS
-           ========================================== */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Arial', sans-serif; }
         body { background-color: #111; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
 
@@ -32,20 +29,6 @@
         .odd-row:last-child { border-bottom: none; padding-bottom: 0; }
         .odd-value { color: #FFF; font-size: 12px; }
         .loading { text-align: center; color: #FAFF00; font-size: 12px; margin-bottom: 10px; }
-        
-        /* Debug visual en pantalla */
-        .debug-info {
-            background: rgba(255, 0, 0, 0.8);
-            color: white;
-            font-size: 7px;
-            padding: 3px 5px;
-            margin-top: 10px;
-            border-radius: 3px;
-            max-height: 80px;
-            overflow-y: auto;
-            display: block;
-            word-break: break-all;
-        }
     </style>
 </head>
 <body>
@@ -63,13 +46,11 @@
                     <span class="dot dot-local"></span>
                     <span id="equipo-local">---</span>
                 </div>
-
                 <div class="score-board">
                     <span id="marcador-local">0</span>
                     <span class="separator">-</span>
                     <span id="marcador-visita">0</span>
                 </div>
-
                 <div class="team right">
                     <span id="equipo-visita">---</span>
                     <span class="dot dot-visita"></span>
@@ -78,7 +59,6 @@
 
             <div class="odds-section">
                 <h4 class="odds-title">OPCIONES DE APUESTA</h4>
-
                 <div class="odd-row">
                     <span id="label-gana-local">GANA LOCAL</span>
                     <span class="odd-value" id="cuota-local">0.00</span>
@@ -92,41 +72,11 @@
                     <span class="odd-value" id="cuota-visita">0.00</span>
                 </div>
             </div>
-            
-            <!-- Debug visual -->
-            <div class="debug-info" id="debug-info"></div>
         </div>
     </div>
 
     <script>
-        // ==========================================
-        // CONFIGURACIÓN Y VARIABLES GLOBALES
-        // ==========================================
         let escaneoEnProgreso = false;
-        const DEBUG_MODE = true;
-        
-        // Función helper para logs
-        function debugLog(mensaje, data = null) {
-            if (!DEBUG_MODE) return;
-            
-            const timestamp = new Date().toLocaleTimeString();
-            const logMessage = `[${timestamp}] ${mensaje}`;
-            console.log(logMessage, data || '');
-            
-            // También mostrar en el widget
-            const debugElement = document.getElementById('debug-info');
-            if (debugElement) {
-                debugElement.innerHTML += `<br>${mensaje.substring(0, 100)}`;
-                debugElement.scrollTop = debugElement.scrollHeight;
-                
-                // Limitar el tamaño del debug
-                const lines = debugElement.innerHTML.split('<br>');
-                if (lines.length > 10) {
-                    lines.splice(0, lines.length - 10);
-                    debugElement.innerHTML = lines.join('<br>');
-                }
-            }
-        }
 
         // ==========================================
         // FUNCIÓN PRINCIPAL DE CONEXIÓN A LA API
@@ -134,18 +84,12 @@
         async function fetchCodere(endpoint) {
             try {
                 const url = `/api/proxy?endpoint=${encodeURIComponent(endpoint)}`;
-                
                 const response = await fetch(url);
                 
-                if (response.status === 204) {
-                    return null;
-                }
+                if (response.status === 204) return null;
                 
                 const data = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(`Status: ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`Status: ${response.status}`);
                 
                 return data;
             } catch (error) {
@@ -160,9 +104,7 @@
         function extraerLigasDePaises(paisesResponse) {
             let ligasReales = [];
             
-            if (!Array.isArray(paisesResponse)) {
-                return ligasReales;
-            }
+            if (!Array.isArray(paisesResponse)) return ligasReales;
             
             for (let pais of paisesResponse) {
                 const posiblesLigas = pais.Leagues || pais.leagues || pais.Items || [];
@@ -178,155 +120,105 @@
         }
 
         // ==========================================
-        // FUNCIÓN MEJORADA PARA PROCESAR CUOTAS
+        // FUNCIÓN PARA PROCESAR EL ARRAY DE EVENTOS
         // ==========================================
-        function procesarCuotas(detallesEvento) {
+        function procesarArrayEventos(arrayEventos) {
+            if (!Array.isArray(arrayEventos) || arrayEventos.length === 0) {
+                console.log('❌ No es un array o está vacío');
+                return { cuotaL: "N/D", cuotaE: "N/D", cuotaV: "N/D", textoEmpate: "EMPATE" };
+            }
+
+            console.log(`📊 Procesando array de ${arrayEventos.length} elementos`);
+            
+            // Clasificar elementos por tipo
+            const eventos = [];
+            const juegos = [];
+            const resultados = [];
+            
+            for (let item of arrayEventos) {
+                if (!item.Value) continue;
+                
+                const value = item.Value;
+                const tipo = value.Type;
+                const eventNodeTypeId = value.EventNodeTypeId;
+                
+                if (tipo === "Event" || eventNodeTypeId === 10) {
+                    eventos.push(value);
+                } else if (tipo === "Game" || eventNodeTypeId === 11) {
+                    juegos.push(value);
+                } else if (tipo === "Result" || eventNodeTypeId === 12) {
+                    resultados.push(value);
+                }
+            }
+            
+            console.log(`📊 Encontrados: ${eventos.length} eventos, ${juegos.length} juegos, ${resultados.length} resultados`);
+            
+            // Buscar el mercado principal (GameType = 1 suele ser "Resultado Final" o similar)
+            // Para baloncesto, el mercado principal generalmente es GameType = 159 (Money Line)
+            let mercadoPrincipal = null;
+            
+            // Priorizar GameType 1 (Resultado Final) o 159 (Money Line)
+            for (let juego of juegos) {
+                if (juego.GameType === 1 || juego.GameType === 159) {
+                    mercadoPrincipal = juego;
+                    console.log(`✅ Encontrado mercado principal: GameType ${juego.GameType} - ${juego.NodeName}`);
+                    break;
+                }
+            }
+            
+            // Si no encontramos los tipos específicos, tomar el primer juego
+            if (!mercadoPrincipal && juegos.length > 0) {
+                mercadoPrincipal = juegos[0];
+                console.log(`⚠️ Usando primer juego disponible: GameType ${mercadoPrincipal.GameType} - ${mercadoPrincipal.NodeName}`);
+            }
+            
+            if (!mercadoPrincipal) {
+                console.log('❌ No se encontraron juegos/mercados');
+                return { cuotaL: "N/D", cuotaE: "N/D", cuotaV: "N/D", textoEmpate: "EMPATE" };
+            }
+            
+            // Buscar resultados que pertenezcan a este mercado
+            const resultadosMercado = resultados.filter(r => r.ParentNodeId === mercadoPrincipal.NodeId);
+            
+            console.log(`📊 Resultados para este mercado: ${resultadosMercado.length}`);
+            
+            if (resultadosMercado.length === 0) {
+                console.log('❌ No se encontraron resultados para este mercado');
+                return { cuotaL: "N/D", cuotaE: "N/D", cuotaV: "N/D", textoEmpate: "EMPATE" };
+            }
+            
+            // Procesar resultados
             let cuotaL = "N/D", cuotaE = "N/D", cuotaV = "N/D";
             let textoEmpate = "EMPATE";
             
-            if (!detallesEvento) {
-                debugLog('⚠️ No se recibieron detalles del evento');
-                return { cuotaL, cuotaE, cuotaV, textoEmpate };
-            }
-            
-            // MOSTRAR ESTRUCTURA COMPLETA EN CONSOLA
-            debugLog('🔍 ESTRUCTURA COMPLETA DEL EVENTO:');
-            console.log('🎯 EVENTO COMPLETO:', JSON.stringify(detallesEvento, null, 2));
-            console.log('📋 PROPIEDADES DEL EVENTO:', Object.keys(detallesEvento));
-            
-            let mercados = null;
-            let rutaMercados = '';
-            
-            // Opción 1: Games
-            if (detallesEvento.Games && Array.isArray(detallesEvento.Games) && detallesEvento.Games.length > 0) {
-                mercados = detallesEvento.Games;
-                rutaMercados = 'Games';
-                debugLog(`✅ Encontrado: detallesEvento.Games (${mercados.length} mercados)`);
-            }
-            // Opción 2: Markets
-            else if (detallesEvento.Markets && Array.isArray(detallesEvento.Markets) && detallesEvento.Markets.length > 0) {
-                mercados = detallesEvento.Markets;
-                rutaMercados = 'Markets';
-                debugLog(`✅ Encontrado: detallesEvento.Markets (${mercados.length} mercados)`);
-            }
-            // Opción 3: GamesList
-            else if (detallesEvento.GamesList && Array.isArray(detallesEvento.GamesList) && detallesEvento.GamesList.length > 0) {
-                mercados = detallesEvento.GamesList;
-                rutaMercados = 'GamesList';
-                debugLog(`✅ Encontrado: detallesEvento.GamesList (${mercados.length} mercados)`);
-            }
-            // Opción 4: EventGames
-            else if (detallesEvento.EventGames && Array.isArray(detallesEvento.EventGames) && detallesEvento.EventGames.length > 0) {
-                mercados = detallesEvento.EventGames;
-                rutaMercados = 'EventGames';
-                debugLog(`✅ Encontrado: detallesEvento.EventGames (${mercados.length} mercados)`);
-            }
-            // Opción 5: Buscar cualquier array en el primer nivel
-            else {
-                debugLog('🔍 Buscando cualquier array en el evento...');
-                for (let key in detallesEvento) {
-                    if (detallesEvento.hasOwnProperty(key) && Array.isArray(detallesEvento[key]) && detallesEvento[key].length > 0) {
-                        const arr = detallesEvento[key];
-                        debugLog(`📦 Encontrado array en: detallesEvento.${key} (${arr.length} elementos)`);
-                        if (arr.length > 0) {
-                            debugLog(`   Tipo del primer elemento: ${typeof arr[0]}`);
-                            debugLog(`   Primer elemento: ${JSON.stringify(arr[0]).substring(0, 300)}`);
-                        }
-                    }
-                }
+            if (resultadosMercado.length === 2) {
+                // Deportes sin empate (baloncesto, tenis)
+                const res1 = resultadosMercado[0];
+                const res2 = resultadosMercado[1];
                 
-                // Si no encontramos nada, intentar usar el evento mismo si tiene Results
-                if (detallesEvento.Results && Array.isArray(detallesEvento.Results)) {
-                    mercados = [detallesEvento];
-                    rutaMercados = 'Results directos';
-                    debugLog('✅ Usando Results del evento directamente');
-                }
-            }
-            
-            if (!mercados || mercados.length === 0) {
-                debugLog('❌ No se encontraron mercados en ninguna estructura conocida');
-                return { cuotaL, cuotaE, cuotaV, textoEmpate };
-            }
-            
-            // Tomar el primer mercado
-            const mercadoPrincipal = mercados[0];
-            debugLog(`🎮 Mercado principal (${rutaMercados}):`);
-            console.log('MERCADO PRINCIPAL:', JSON.stringify(mercadoPrincipal, null, 2));
-            console.log('PROPIEDADES DEL MERCADO:', Object.keys(mercadoPrincipal));
-            
-            // Buscar resultados en el mercado
-            let resultados = null;
-            
-            if (mercadoPrincipal.Results && Array.isArray(mercadoPrincipal.Results)) {
-                resultados = mercadoPrincipal.Results;
-                debugLog(`✅ Resultados en: mercadoPrincipal.Results (${resultados.length})`);
-            } else if (mercadoPrincipal.results && Array.isArray(mercadoPrincipal.results)) {
-                resultados = mercadoPrincipal.results;
-                debugLog(`✅ Resultados en: mercadoPrincipal.results (${resultados.length})`);
-            } else if (mercadoPrincipal.Odds && Array.isArray(mercadoPrincipal.Odds)) {
-                resultados = mercadoPrincipal.Odds;
-                debugLog(`✅ Resultados en: mercadoPrincipal.Odds (${resultados.length})`);
-            } else if (mercadoPrincipal.Selections && Array.isArray(mercadoPrincipal.Selections)) {
-                resultados = mercadoPrincipal.Selections;
-                debugLog(`✅ Resultados en: mercadoPrincipal.Selections (${resultados.length})`);
-            } else {
-                // Buscar cualquier array en el mercado
-                debugLog('🔍 Buscando arrays en el mercado...');
-                for (let key in mercadoPrincipal) {
-                    if (mercadoPrincipal.hasOwnProperty(key) && Array.isArray(mercadoPrincipal[key]) && mercadoPrincipal[key].length > 0) {
-                        const arr = mercadoPrincipal[key];
-                        debugLog(`📦 Encontrado array en mercado.${key} (${arr.length} elementos)`);
-                        if (arr.length > 0) {
-                            debugLog(`   Primer elemento: ${JSON.stringify(arr[0]).substring(0, 300)}`);
-                        }
-                        
-                        // Si el array contiene objetos con Odds/Price, probablemente son resultados
-                        if (arr.length > 0 && (arr[0].Odds !== undefined || arr[0].Price !== undefined || arr[0].odds !== undefined)) {
-                            resultados = arr;
-                            debugLog(`✅ Usando mercado.${key} como resultados`);
-                            break;
-                        }
-                    }
-                }
-            }
-            
-            if (!resultados || resultados.length === 0) {
-                debugLog('❌ No se encontraron resultados');
-                return { cuotaL, cuotaE, cuotaV, textoEmpate };
-            }
-            
-            debugLog(`📊 Procesando ${resultados.length} resultados`);
-            
-            // Mostrar estructura de resultados
-            resultados.forEach((res, index) => {
-                console.log(`RESULTADO ${index}:`, JSON.stringify(res, null, 2));
-                debugLog(`   Resultado ${index}: ${JSON.stringify(res).substring(0, 150)}`);
-            });
-            
-            // Procesar resultados según cantidad
-            if (resultados.length === 2) {
-                // Deportes sin empate
-                const valor1 = resultados[0].Odds || resultados[0].Price || resultados[0].odds || resultados[0].Value || "N/D";
-                const valor2 = resultados[1].Odds || resultados[1].Price || resultados[1].odds || resultados[1].Value || "N/D";
-                
-                cuotaL = typeof valor1 === 'number' ? valor1.toFixed(2) : valor1;
-                cuotaV = typeof valor2 === 'number' ? valor2.toFixed(2) : valor2;
+                cuotaL = res1.Odds || res1.Price || "N/D";
+                cuotaV = res2.Odds || res2.Price || "N/D";
                 textoEmpate = "N/A";
                 cuotaE = "-";
-                debugLog('🎾 Deporte sin empate (2 resultados)');
-            } else if (resultados.length >= 3) {
-                // Deportes con empate
-                const valor1 = resultados[0].Odds || resultados[0].Price || resultados[0].odds || resultados[0].Value || "N/D";
-                const valor2 = resultados[1].Odds || resultados[1].Price || resultados[1].odds || resultados[1].Value || "N/D";
-                const valor3 = resultados[2].Odds || resultados[2].Price || resultados[2].odds || resultados[2].Value || "N/D";
                 
-                cuotaL = typeof valor1 === 'number' ? valor1.toFixed(2) : valor1;
-                cuotaE = typeof valor2 === 'number' ? valor2.toFixed(2) : valor2;
-                cuotaV = typeof valor3 === 'number' ? valor3.toFixed(2) : valor3;
-                debugLog('⚽ Deporte con empate (3+ resultados)');
+                console.log(`🎯 Cuotas (2 resultados): L=${cuotaL}, V=${cuotaV}`);
+            } else if (resultadosMercado.length >= 3) {
+                // Deportes con empate (fútbol)
+                const res1 = resultadosMercado[0];
+                const res2 = resultadosMercado[1];
+                const res3 = resultadosMercado[2];
+                
+                cuotaL = res1.Odds || res1.Price || "N/D";
+                cuotaE = res2.Odds || res2.Price || "N/D";
+                cuotaV = res3.Odds || res3.Price || "N/D";
+                
+                console.log(`🎯 Cuotas (3 resultados): L=${cuotaL}, E=${cuotaE}, V=${cuotaV}`);
             }
             
-            debugLog(`💰 Cuotas finales: L=${cuotaL} E=${cuotaE} V=${cuotaV}`);
+            // Formatear cuotas
+            if (typeof cuotaL === 'number') cuotaL = cuotaL.toFixed(2);
+            if (typeof cuotaE === 'number') cuotaE = cuotaE.toFixed(2);
+            if (typeof cuotaV === 'number') cuotaV = cuotaV.toFixed(2);
             
             return { cuotaL, cuotaE, cuotaV, textoEmpate };
         }
@@ -335,60 +227,35 @@
         // FUNCIÓN PRINCIPAL DE ACTUALIZACIÓN
         // ==========================================
         async function actualizarDatosSolos() {
-            if (escaneoEnProgreso) {
-                debugLog('⏳ Escaneo ya en progreso, omitiendo...');
-                return;
-            }
+            if (escaneoEnProgreso) return;
             
             escaneoEnProgreso = true;
             const estadoCarga = document.getElementById('estado-carga');
-            const debugElement = document.getElementById('debug-info');
-            
-            // Limpiar debug visual
-            if (debugElement) {
-                debugElement.innerHTML = '';
-            }
 
             try {
                 estadoCarga.style.display = 'block';
-                estadoCarga.innerText = "🔍 Buscando deportes...";
-                debugLog('🚀 INICIANDO BÚSQUEDA DE EVENTOS EN VIVO');
+                estadoCarga.innerText = "Buscando deportes...";
 
-                // 1. Obtener lista de deportes
                 const deportes = await fetchCodere('/sports');
-                if (!deportes || !Array.isArray(deportes)) {
-                    throw new Error("No se pudieron obtener los deportes");
-                }
-                
-                debugLog(`🏆 Deportes totales: ${deportes.length}`);
-                
-                // 2. Filtrar deportes relevantes
+                if (!deportes || !Array.isArray(deportes)) throw new Error("No se pudieron obtener los deportes");
+
                 const deportesTop = ["Fútbol", "Soccer", "Tenis", "Baloncesto", "Esports", "Tenis de Mesa", "Béisbol"];
                 const deportesActivos = deportes.filter(d => deportesTop.includes(d.Name));
-                
-                debugLog(`🎯 Deportes activos: ${deportesActivos.length}`);
 
                 let eventoEnVivo = null;
                 let ligaConEvento = null;
                 let deporteDelEvento = null;
 
-                // 3. Buscar eventos en cada deporte
                 for (let deporte of deportesActivos) {
-                    estadoCarga.innerText = `📡 ${deporte.Name}...`;
-                    debugLog(`🔍 ${deporte.Name}...`);
+                    estadoCarga.innerText = `Cargando ${deporte.Name}...`;
                     
                     const paisesResponse = await fetchCodere(`/sports/${deporte.NodeId}/leagues`);
                     if (!paisesResponse) continue;
                     
                     const ligasReales = extraerLigasDePaises(paisesResponse);
+                    if (ligasReales.length === 0) continue;
                     
-                    if (ligasReales.length === 0) {
-                        debugLog(`📭 Sin ligas para ${deporte.Name}`);
-                        continue;
-                    }
-                    
-                    // Priorizar ligas relevantes
-                    const palabrasClave = ["AMISTOSOS", "INTERNACIONAL", "ESPORTS", "MESA", "LIGA MX", "PRO", "PREMIER"];
+                    const palabrasClave = ["AMISTOSOS", "INTERNACIONAL", "ESPORTS", "MESA", "LIGA MX", "PRO", "PREMIER", "NBA", "WNBA"];
                     ligasReales.sort((a, b) => {
                         const nombreA = (a.Name || '').toUpperCase();
                         const nombreB = (b.Name || '').toUpperCase();
@@ -402,12 +269,11 @@
                     for (let liga of ligasARevisar) {
                         if (!liga.NodeId) continue;
                         
-                        estadoCarga.innerText = `🎮 ${liga.Name?.substring(0, 20)}...`;
+                        estadoCarga.innerText = `Revisando: ${liga.Name?.substring(0, 15)}...`;
                         
                         const eventos = await fetchCodere(`/leagues/${liga.NodeId}/liveEvents`);
                         
                         if (eventos && Array.isArray(eventos) && eventos.length > 0) {
-                            debugLog(`🎉 ¡${eventos.length} eventos en ${liga.Name}!`);
                             eventoEnVivo = eventos[0];
                             ligaConEvento = liga;
                             deporteDelEvento = deporte;
@@ -418,46 +284,45 @@
                     if (eventoEnVivo) break;
                 }
 
-                // 4. Si no hay eventos, mostrar estado vacío
                 if (!eventoEnVivo) {
-                    debugLog('📭 No se encontraron eventos en vivo');
                     mostrarEstadoVacio();
                     estadoCarga.style.display = 'none';
                     escaneoEnProgreso = false;
                     return;
                 }
 
-                // 5. Procesar el evento encontrado
-                debugLog(`🎯 Evento: ${eventoEnVivo.Name}`);
-                
                 const equipos = eventoEnVivo.Name ? eventoEnVivo.Name.split(" - ") : ["LOCAL", "VISITA"];
                 const nombreLocal = equipos[0] ? equipos[0].substring(0, 15).trim() : "LOCAL";
                 const nombreVisita = equipos[1] ? equipos[1].substring(0, 15).trim() : "VISITA";
                 
-                // 6. Obtener detalles completos del evento
-                estadoCarga.innerText = "💰 Cargando cuotas...";
-                const detallesEvento = await fetchCodere(`/events/${eventoEnVivo.NodeId}`);
+                estadoCarga.innerText = "Cargando cuotas...";
                 
-                // Procesar cuotas
-                const cuotas = procesarCuotas(detallesEvento);
+                // Obtener el array completo de eventos
+                const arrayEventos = await fetchCodere(`/events/${eventoEnVivo.NodeId}`);
+                
+                // Procesar el array para extraer cuotas
+                const cuotas = procesarArrayEventos(arrayEventos);
 
-                // 7. Actualizar la interfaz
-                actualizarInterfaz({
-                    deporte: deporteDelEvento,
-                    liga: ligaConEvento,
-                    evento: eventoEnVivo,
-                    nombreLocal,
-                    nombreVisita,
-                    cuotas
-                });
+                // Actualizar interfaz
+                document.getElementById('titulo-liga').innerText = `${deporteDelEvento.Name} - ${ligaConEvento.Name.substring(0, 20)}`;
+                document.getElementById('equipo-local').innerText = nombreLocal.toUpperCase();
+                document.getElementById('equipo-visita').innerText = nombreVisita.toUpperCase();
+                document.getElementById('marcador-local').innerText = eventoEnVivo.HomeScore !== null ? eventoEnVivo.HomeScore : "0";
+                document.getElementById('marcador-visita').innerText = eventoEnVivo.AwayScore !== null ? eventoEnVivo.AwayScore : "0";
+                
+                document.getElementById('label-gana-local').innerText = `GANA ${nombreLocal.toUpperCase()}`;
+                document.getElementById('label-gana-visita').innerText = `GANA ${nombreVisita.toUpperCase()}`;
+                document.getElementById('label-empate').innerText = cuotas.textoEmpate;
+                
+                document.getElementById('cuota-local').innerText = cuotas.cuotaL;
+                document.getElementById('cuota-empate').innerText = cuotas.cuotaE;
+                document.getElementById('cuota-visita').innerText = cuotas.cuotaV;
                 
                 estadoCarga.style.display = 'none';
-                debugLog('✅ ¡ACTUALIZACIÓN COMPLETADA!');
 
             } catch (error) {
-                debugLog('💥 ERROR CRÍTICO');
-                estadoCarga.innerText = "❌ Error de conexión";
-                console.error("Error:", error);
+                console.error("Error en renderizado: ", error);
+                estadoCarga.innerText = "Error de conexión";
             } finally {
                 escaneoEnProgreso = false;
             }
@@ -481,38 +346,9 @@
         }
 
         // ==========================================
-        // FUNCIÓN PARA ACTUALIZAR LA INTERFAZ
-        // ==========================================
-        function actualizarInterfaz(datos) {
-            const { deporte, liga, evento, nombreLocal, nombreVisita, cuotas } = datos;
-            
-            document.getElementById('titulo-liga').innerText = 
-                `${deporte.Name} - ${liga.Name.substring(0, 20)}`;
-            
-            document.getElementById('equipo-local').innerText = nombreLocal.toUpperCase();
-            document.getElementById('equipo-visita').innerText = nombreVisita.toUpperCase();
-            
-            document.getElementById('marcador-local').innerText = 
-                evento.HomeScore !== null && evento.HomeScore !== undefined ? evento.HomeScore : '0';
-            document.getElementById('marcador-visita').innerText = 
-                evento.AwayScore !== null && evento.AwayScore !== undefined ? evento.AwayScore : '0';
-            
-            document.getElementById('label-gana-local').innerText = `GANA ${nombreLocal.toUpperCase()}`;
-            document.getElementById('label-gana-visita').innerText = `GANA ${nombreVisita.toUpperCase()}`;
-            document.getElementById('label-empate').innerText = cuotas.textoEmpate;
-            
-            document.getElementById('cuota-local').innerText = cuotas.cuotaL;
-            document.getElementById('cuota-empate').innerText = cuotas.cuotaE;
-            document.getElementById('cuota-visita').innerText = cuotas.cuotaV;
-        }
-
-        // ==========================================
         // INICIAR EL SISTEMA
         // ==========================================
-        debugLog('🟢 SISTEMA INICIADO - MODO DEBUG');
         actualizarDatosSolos();
-        
-        // Actualizar cada 30 segundos
         setInterval(actualizarDatosSolos, 30000);
     </script>
 </body>
