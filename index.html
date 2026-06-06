@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tablero Codere en Vivo (Escáner Seguro)</title>
+    <title>Tablero Codere en Vivo (Jerarquía Corregida)</title>
     <style>
         /* ==========================================
            ESTILOS CSS
@@ -109,7 +109,6 @@
                 const deportes = await fetchCodere('/sports');
                 if (!deportes) throw new Error("Reconectando...");
 
-                // Deportes principales donde siempre hay eventos en vivo
                 const deportesTop = ["Fútbol", "Soccer", "Tenis", "Baloncesto", "Esports", "Tenis de Mesa", "Béisbol"];
                 const deportesActivos = deportes.filter(d => deportesTop.includes(d.Name));
 
@@ -117,38 +116,47 @@
                 let ligaConEvento = null;
                 let deporteDelEvento = null;
 
-                // Escaneo secuencial para evitar que Codere nos bloquee (GET ---)
                 for (let deporte of deportesActivos) {
-                    const ligas = await fetchCodere(`/sports/${deporte.NodeId}/leagues`);
-                    if (!ligas) continue;
+                    const paisesResponse = await fetchCodere(`/sports/${deporte.NodeId}/leagues`);
+                    if (!paisesResponse) continue;
 
-                    // Ordenamos para que las ligas que suelen tener partidos en vivo queden arriba
-                    const palabrasClave = ["AMISTOSOS", "INTERNACIONAL", "ESPORTS", "MESA", "PRO", "LIGA"];
-                    ligas.sort((a, b) => {
+                    // ==========================================
+                    // LA CORRECCIÓN: Extraer las LIGAS de los PAÍSES
+                    // ==========================================
+                    let ligasReales = [];
+                    for (let pais of paisesResponse) {
+                        if (pais.Leagues && Array.isArray(pais.Leagues)) {
+                            ligasReales.push(...pais.Leagues); // Juntamos todas las ligas de todos los países
+                        } else {
+                            ligasReales.push(pais); // Por si la API devuelve alguna liga suelta
+                        }
+                    }
+
+                    // Ordenamos las ligas reales para priorizar Amistosos y eSports
+                    const palabrasClave = ["AMISTOSOS", "INTERNACIONAL", "ESPORTS", "MESA", "LIGA MX", "PRO"];
+                    ligasReales.sort((a, b) => {
                         const prioA = palabrasClave.some(k => a.Name.toUpperCase().includes(k)) ? 1 : 0;
                         const prioB = palabrasClave.some(k => b.Name.toUpperCase().includes(k)) ? 1 : 0;
                         return prioB - prioA;
                     });
 
-                    // Tomamos máximo 12 ligas por deporte para que el escaneo sea rápido
-                    const ligasARevisar = ligas.slice(0, 12);
+                    // Revisamos un máximo de 10 ligas por deporte
+                    const ligasARevisar = ligasReales.slice(0, 10);
 
                     for (let liga of ligasARevisar) {
                         estadoCarga.innerText = `Revisando: ${liga.Name.substring(0, 15)}...`;
                         const eventos = await fetchCodere(`/leagues/${liga.NodeId}/liveEvents`);
                         
-                        // Si encontramos un partido que se está jugando en este momento
                         if (eventos && eventos.length > 0) {
                             eventoEnVivo = eventos[0];
                             ligaConEvento = liga;
                             deporteDelEvento = deporte;
-                            break; // Detenemos la búsqueda de ligas
+                            break; 
                         }
                     }
-                    if (eventoEnVivo) break; // Detenemos la búsqueda de deportes
+                    if (eventoEnVivo) break; 
                 }
 
-                // Fallback si a esta hora exacta no hay literalmente ningún evento en vivo en el mundo
                 if (!eventoEnVivo) {
                     document.getElementById('titulo-liga').innerText = `RADAR GLOBAL - SIN EVENTOS`;
                     document.getElementById('equipo-local').innerText = "CODERE";
@@ -208,7 +216,6 @@
             } catch (error) {
                 console.error("Error en renderizado: ", error);
             } finally {
-                // Desbloqueamos el candado
                 escaneoEnProgreso = false;
             }
         }
