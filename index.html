@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tablero Codere en Vivo (Producción)</title>
+    <title>Tablero Codere en Vivo (Versión Depurada)</title>
     <style>
         /* ==========================================
-           ESTILOS CSS (Sin alteraciones visuales)
+           ESTILOS CSS
            ========================================== */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Arial', sans-serif; }
         body { background-color: #111; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
@@ -32,6 +32,19 @@
         .odd-row:last-child { border-bottom: none; padding-bottom: 0; }
         .odd-value { color: #FFF; font-size: 12px; }
         .loading { text-align: center; color: #FAFF00; font-size: 12px; margin-bottom: 10px; }
+        
+        /* Estilo para logs visuales en pantalla (opcional) */
+        .debug-info {
+            background: rgba(255, 0, 0, 0.8);
+            color: white;
+            font-size: 8px;
+            padding: 2px 5px;
+            margin-top: 10px;
+            border-radius: 3px;
+            max-height: 60px;
+            overflow-y: auto;
+            display: none; /* Cambiar a 'block' para ver en pantalla */
+        }
     </style>
 </head>
 <body>
@@ -40,7 +53,7 @@
         <img src="https://jxwdncxtnhmrufvdxuti.supabase.co/storage/v1/object/public/banners-publicos/WhatsApp%20Image%202026-06-05%20at%2012.17.23%20PM.jpeg" alt="Fondo Promocional" class="fondo-img">
 
         <div class="data-overlay" id="widget-datos">
-            <div id="estado-carga" class="loading">Sincronizando feed oficial...</div>
+            <div id="estado-carga" class="loading">Iniciando conexión segura...</div>
 
             <h3 class="league-title" id="titulo-liga">BUSCANDO...</h3>
 
@@ -78,175 +91,359 @@
                     <span class="odd-value" id="cuota-visita">0.00</span>
                 </div>
             </div>
+            
+            <!-- Debug visual (opcional) -->
+            <div class="debug-info" id="debug-info"></div>
         </div>
     </div>
 
     <script>
+        // ==========================================
+        // CONFIGURACIÓN Y VARIABLES GLOBALES
+        // ==========================================
         let escaneoEnProgreso = false;
-
-        async function fetchCodere(endpoint) {
-            try {
-                const response = await fetch(`/api/proxy?endpoint=${encodeURIComponent(endpoint)}`);
-                if (response.status === 204) return null; 
-                const data = await response.json();
-                if (!response.ok) throw new Error(`Status: ${response.status}`);
-                return data;
-            } catch (error) {
-                return null; 
+        const DEBUG_MODE = true; // Cambiar a false para desactivar logs
+        
+        // Función helper para logs
+        function debugLog(mensaje, data = null) {
+            if (!DEBUG_MODE) return;
+            
+            const timestamp = new Date().toLocaleTimeString();
+            const logMessage = `[${timestamp}] ${mensaje}`;
+            console.log(logMessage, data || '');
+            
+            // También mostrar en el widget si existe el elemento
+            const debugElement = document.getElementById('debug-info');
+            if (debugElement) {
+                debugElement.style.display = 'block';
+                debugElement.innerHTML += `<br>${logMessage}`;
+                debugElement.scrollTop = debugElement.scrollHeight;
             }
         }
 
-        async function actualizarDatosSolos() {
-            if (escaneoEnProgreso) return; 
-            escaneoEnProgreso = true;
+        // ==========================================
+        // FUNCIÓN PRINCIPAL DE CONEXIÓN A LA API
+        // ==========================================
+        async function fetchCodere(endpoint) {
+            try {
+                const url = `/api/proxy?endpoint=${encodeURIComponent(endpoint)}`;
+                debugLog(`🌐 Llamando a: ${endpoint}`);
+                
+                const response = await fetch(url);
+                
+                if (response.status === 204) {
+                    debugLog(`⚠️ 204 No Content para: ${endpoint}`);
+                    return null;
+                }
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    debugLog(`❌ Error ${response.status} para: ${endpoint}`, data);
+                    throw new Error(`Status: ${response.status}`);
+                }
+                
+                debugLog(`✅ Éxito en: ${endpoint}`, 
+                    Array.isArray(data) ? `Array con ${data.length} elementos` : typeof data);
+                
+                return data;
+            } catch (error) {
+                debugLog(`💥 Error crítico en: ${endpoint}`, error.message);
+                return null;
+            }
+        }
+
+        // ==========================================
+        // FUNCIÓN PARA EXTRAER LIGAS DE PAÍSES
+        // ==========================================
+        function extraerLigasDePaises(paisesResponse) {
+            let ligasReales = [];
             
+            if (!Array.isArray(paisesResponse)) {
+                debugLog('⚠️ La respuesta no es un array', paisesResponse);
+                return ligasReales;
+            }
+            
+            for (let pais of paisesResponse) {
+                // Intentar múltiples nombres de campo para las ligas
+                const posiblesLigas = pais.Leagues || 
+                                     pais.leagues || 
+                                     pais.LeaguesList || 
+                                     pais.Items || 
+                                     pais.Ligas || 
+                                     pais.data || 
+                                     [];
+                
+                if (Array.isArray(posiblesLigas) && posiblesLigas.length > 0) {
+                    debugLog(`📦 País "${pais.Name}": ${posiblesLigas.length} ligas encontradas`);
+                    ligasReales.push(...posiblesLigas);
+                } else if (pais.NodeId && pais.Name) {
+                    // Si no tiene array de ligas pero tiene NodeId, podría ser una liga directa
+                    debugLog(`🔍 Posible liga directa: "${pais.Name}" (ID: ${pais.NodeId})`);
+                    ligasReales.push(pais);
+                }
+            }
+            
+            debugLog(`📊 Total ligas extraídas: ${ligasReales.length}`);
+            return ligasReales;
+        }
+
+        // ==========================================
+        // FUNCIÓN PARA PROCESAR CUOTAS
+        // ==========================================
+        function procesarCuotas(detallesEvento) {
+            let cuotaL = "N/D", cuotaE = "N/D", cuotaV = "N/D";
+            let textoEmpate = "EMPATE";
+            
+            if (!detallesEvento || !detallesEvento.Games || detallesEvento.Games.length === 0) {
+                debugLog('⚠️ No se encontraron juegos/mercados en el evento');
+                return { cuotaL, cuotaE, cuotaV, textoEmpate };
+            }
+            
+            const mercadoPrincipal = detallesEvento.Games[0];
+            debugLog(`🎮 Mercado principal encontrado: ${mercadoPrincipal.Name || 'Sin nombre'}`);
+            
+            if (mercadoPrincipal.Results && Array.isArray(mercadoPrincipal.Results)) {
+                debugLog(`📊 Resultados encontrados: ${mercadoPrincipal.Results.length}`);
+                
+                if (mercadoPrincipal.Results.length === 2) {
+                    // Deportes sin empate (Tenis, Baloncesto, etc.)
+                    cuotaL = mercadoPrincipal.Results[0].Odds?.toFixed(2) || "N/D";
+                    cuotaV = mercadoPrincipal.Results[1].Odds?.toFixed(2) || "N/D";
+                    textoEmpate = "N/A";
+                    cuotaE = "-";
+                    debugLog('🎾 Deporte sin empate detectado');
+                } else if (mercadoPrincipal.Results.length >= 3) {
+                    // Fútbol y deportes con empate
+                    cuotaL = mercadoPrincipal.Results[0].Odds?.toFixed(2) || "N/D";
+                    cuotaE = mercadoPrincipal.Results[1].Odds?.toFixed(2) || "N/D";
+                    cuotaV = mercadoPrincipal.Results[2].Odds?.toFixed(2) || "N/D";
+                    debugLog('⚽ Deporte con empate detectado');
+                }
+            }
+            
+            return { cuotaL, cuotaE, cuotaV, textoEmpate };
+        }
+
+        // ==========================================
+        // FUNCIÓN PRINCIPAL DE ACTUALIZACIÓN
+        // ==========================================
+        async function actualizarDatosSolos() {
+            if (escaneoEnProgreso) {
+                debugLog('⏳ Escaneo ya en progreso, omitiendo...');
+                return;
+            }
+            
+            escaneoEnProgreso = true;
             const estadoCarga = document.getElementById('estado-carga');
+            const debugElement = document.getElementById('debug-info');
+            
+            // Limpiar debug visual
+            if (debugElement) {
+                debugElement.innerHTML = '';
+                debugElement.style.display = 'none';
+            }
 
             try {
                 estadoCarga.style.display = 'block';
-                estadoCarga.innerText = "Abriendo catálogo de países...";
+                estadoCarga.innerText = "🔍 Buscando deportes...";
+                debugLog('🚀 INICIANDO BÚSQUEDA DE EVENTOS EN VIVO');
 
+                // 1. Obtener lista de deportes
                 const deportes = await fetchCodere('/sports');
-                if (!deportes) throw new Error("Reconectando...");
-
-                const deportesTop = ["Fútbol", "Soccer", "Tenis", "Baloncesto", "Esports", "Tenis de Mesa"];
+                if (!deportes || !Array.isArray(deportes)) {
+                    throw new Error("No se pudieron obtener los deportes");
+                }
+                
+                debugLog(`🏆 Deportes totales recibidos: ${deportes.length}`);
+                
+                // 2. Filtrar deportes relevantes
+                const deportesTop = ["Fútbol", "Soccer", "Tenis", "Baloncesto", "Esports", "Tenis de Mesa", "Béisbol"];
                 const deportesActivos = deportes.filter(d => deportesTop.includes(d.Name));
+                
+                debugLog(`🎯 Deportes activos filtrados: ${deportesActivos.length}`);
+                deportesActivos.forEach(d => debugLog(`  • ${d.Name} (ID: ${d.NodeId})`));
 
                 let eventoEnVivo = null;
                 let ligaConEvento = null;
                 let deporteDelEvento = null;
 
+                // 3. Buscar eventos en cada deporte
                 for (let deporte of deportesActivos) {
-                    const carpetasPais = await fetchCodere(`/sports/${deporte.NodeId}/leagues`);
-                    if (!carpetasPais) continue;
-
-                    estadoCarga.innerText = `Extrayendo ligas reales...`;
-
-                    // ==========================================
-                    // EL EXTRACTOR DINÁMICO (LA SOLUCIÓN AL PROBLEMA)
-                    // ==========================================
-                    let ligasReales = [];
-                    for (let carpeta of carpetasPais) {
-                        let tieneLigasDentro = false;
-                        
-                        // Buscamos cualquier array dentro de la carpeta del país (ej. "Internacional")
-                        for (let propiedad in carpeta) {
-                            if (Array.isArray(carpeta[propiedad])) {
-                                carpeta[propiedad].forEach(ligaReal => {
-                                    if (ligaReal && ligaReal.NodeId) {
-                                        ligasReales.push(ligaReal);
-                                        tieneLigasDentro = true;
-                                    }
-                                });
-                            }
-                        }
-                        
-                        // Si la carpeta no tenía nada adentro, la tratamos directamente como liga
-                        if (!tieneLigasDentro && carpeta.NodeId) {
-                            ligasReales.push(carpeta);
-                        }
+                    estadoCarga.innerText = `📡 Cargando ${deporte.Name}...`;
+                    debugLog(`\n🔍 EXPLORANDO DEPORTE: ${deporte.Name}`);
+                    
+                    // Obtener países/ligas del deporte
+                    const paisesResponse = await fetchCodere(`/sports/${deporte.NodeId}/leagues`);
+                    if (!paisesResponse) {
+                        debugLog(`⚠️ Sin respuesta para ${deporte.Name}, siguiente deporte...`);
+                        continue;
                     }
-
-                    // Priorizamos los Amistosos que vimos en tu pantalla
-                    const palabrasClave = ["AMISTOSOS", "INTERNACIONAL", "ESPORTS", "MESA"];
+                    
+                    // Extraer ligas de los países
+                    const ligasReales = extraerLigasDePaises(paisesResponse);
+                    
+                    if (ligasReales.length === 0) {
+                        debugLog(`📭 No se encontraron ligas para ${deporte.Name}`);
+                        continue;
+                    }
+                    
+                    // 4. Priorizar ligas relevantes
+                    const palabrasClave = ["AMISTOSOS", "INTERNACIONAL", "ESPORTS", "MESA", "LIGA MX", "PRO", "PREMIER"];
                     ligasReales.sort((a, b) => {
-                        const prioA = palabrasClave.some(k => a.Name.toUpperCase().includes(k)) ? 1 : 0;
-                        const prioB = palabrasClave.some(k => b.Name.toUpperCase().includes(k)) ? 1 : 0;
+                        const nombreA = (a.Name || '').toUpperCase();
+                        const nombreB = (b.Name || '').toUpperCase();
+                        const prioA = palabrasClave.some(k => nombreA.includes(k)) ? 1 : 0;
+                        const prioB = palabrasClave.some(k => nombreB.includes(k)) ? 1 : 0;
                         return prioB - prioA;
                     });
-
-                    // Revisamos las primeras 15 ligas reales encontradas
-                    const ligasARevisar = ligasReales.slice(0, 15);
-
+                    
+                    // 5. Buscar eventos en vivo en las ligas
+                    const ligasARevisar = ligasReales.slice(0, 10);
+                    debugLog(`🔍 Revisando ${ligasARevisar.length} ligas prioritarias...`);
+                    
                     for (let liga of ligasARevisar) {
-                        estadoCarga.innerText = `Consultando partidos: ${liga.Name.substring(0, 15)}...`;
+                        if (!liga.NodeId) {
+                            debugLog(`⚠️ Liga sin NodeId: ${liga.Name}`);
+                            continue;
+                        }
+                        
+                        estadoCarga.innerText = `🎮 ${liga.Name?.substring(0, 20)}...`;
+                        debugLog(`  📋 Revisando liga: ${liga.Name} (ID: ${liga.NodeId})`);
+                        
                         const eventos = await fetchCodere(`/leagues/${liga.NodeId}/liveEvents`);
                         
-                        if (eventos && eventos.length > 0) {
+                        if (eventos && Array.isArray(eventos) && eventos.length > 0) {
+                            debugLog(`  🎉 ¡${eventos.length} EVENTOS EN VIVO ENCONTRADOS!`);
                             eventoEnVivo = eventos[0];
                             ligaConEvento = liga;
                             deporteDelEvento = deporte;
-                            break; 
+                            break;
                         }
                     }
-                    if (eventoEnVivo) break; 
+                    
+                    if (eventoEnVivo) break;
+                    debugLog(`❌ Sin eventos en vivo para ${deporte.Name}`);
                 }
 
-                // ==========================================
-                // SALVAVIDAS PARA LA ENTREGA
-                // ==========================================
+                // 6. Si no hay eventos, mostrar estado vacío
                 if (!eventoEnVivo) {
-                    // Si el API de plano nos bloquea en la presentación, inyectamos tu ejemplo real 
-                    // de Codere para que el display muestre un evento vivo y puedas entregar.
-                    document.getElementById('titulo-liga').innerText = `FÚTBOL - AMISTOSOS INTERNACIONALES`;
-                    document.getElementById('equipo-local').innerText = "CANADÁ";
-                    document.getElementById('equipo-visita').innerText = "REP. IRLANDA";
-                    document.getElementById('marcador-local').innerText = "1";
-                    document.getElementById('marcador-visita').innerText = "1";
-                    document.getElementById('label-gana-local').innerText = `GANA CANADÁ`;
-                    document.getElementById('label-gana-visita').innerText = `GANA REP. IRLANDA`;
-                    document.getElementById('label-empate').innerText = "EMPATE";
-                    document.getElementById('cuota-local').innerText = "+180";
-                    document.getElementById('cuota-empate').innerText = "-150";
-                    document.getElementById('cuota-visita').innerText = "+550";
-                    
+                    debugLog('📭 NO SE ENCONTRARON EVENTOS EN VIVO EN NINGÚN DEPORTE');
+                    mostrarEstadoVacio();
                     estadoCarga.style.display = 'none';
                     escaneoEnProgreso = false;
-                    return; 
+                    return;
                 }
 
-                // Extracción de datos reales del API
-                const equipos = eventoEnVivo.Name.split(" - ");
-                const nombreLocal = equipos[0] ? equipos[0].substring(0, 15).trim() : "LOCAL"; 
+                // 7. Procesar el evento encontrado
+                debugLog(`\n🎯 PROCESANDO EVENTO ENCONTRADO:`);
+                debugLog(`  Deporte: ${deporteDelEvento.Name}`);
+                debugLog(`  Liga: ${ligaConEvento.Name}`);
+                debugLog(`  Evento: ${eventoEnVivo.Name}`);
+                
+                // Extraer nombres de equipos
+                const equipos = eventoEnVivo.Name ? eventoEnVivo.Name.split(" - ") : ["LOCAL", "VISITA"];
+                const nombreLocal = equipos[0] ? equipos[0].substring(0, 15).trim() : "LOCAL";
                 const nombreVisita = equipos[1] ? equipos[1].substring(0, 15).trim() : "VISITA";
-
+                
+                debugLog(`  Equipos: ${nombreLocal} vs ${nombreVisita}`);
+                
+                // 8. Obtener detalles completos del evento
+                estadoCarga.innerText = "💰 Cargando cuotas...";
                 const detallesEvento = await fetchCodere(`/events/${eventoEnVivo.NodeId}`);
-                const mercadoPrincipal = detallesEvento ? detallesEvento.Games[0] : null; 
+                
+                // Procesar cuotas
+                const cuotas = procesarCuotas(detallesEvento);
+                
+                debugLog(`  Cuotas: L=${cuotas.cuotaL} E=${cuotas.cuotaE} V=${cuotas.cuotaV}`);
 
-                let cuotaL = "N/D", cuotaE = "N/D", cuotaV = "N/D";
-                let textoEmpate = "EMPATE";
-
-                if (mercadoPrincipal && mercadoPrincipal.Results) {
-                    if (mercadoPrincipal.Results.length === 2) {
-                        cuotaL = mercadoPrincipal.Results[0].Odds;
-                        textoEmpate = "N/A";
-                        cuotaE = "-";
-                        cuotaV = mercadoPrincipal.Results[1].Odds;
-                    } else if (mercadoPrincipal.Results.length >= 3) {
-                        cuotaL = mercadoPrincipal.Results[0].Odds;
-                        cuotaE = mercadoPrincipal.Results[1].Odds;
-                        cuotaV = mercadoPrincipal.Results[2].Odds;
-                    }
-                }
-
-                // Inyección Visual
-                document.getElementById('titulo-liga').innerText = `${deporteDelEvento.Name} - ${ligaConEvento.Name.substring(0, 20)}`;
-                document.getElementById('equipo-local').innerText = nombreLocal.toUpperCase();
-                document.getElementById('equipo-visita').innerText = nombreVisita.toUpperCase();
-
-                document.getElementById('marcador-local').innerText = eventoEnVivo.HomeScore !== null ? eventoEnVivo.HomeScore : "0";
-                document.getElementById('marcador-visita').innerText = eventoEnVivo.AwayScore !== null ? eventoEnVivo.AwayScore : "0";
-
-                document.getElementById('label-gana-local').innerText = `GANA ${nombreLocal.toUpperCase()}`;
-                document.getElementById('label-gana-visita').innerText = `GANA ${nombreVisita.toUpperCase()}`;
-                document.getElementById('label-empate').innerText = textoEmpate;
-
-                document.getElementById('cuota-local').innerText = cuotaL;
-                document.getElementById('cuota-empate').innerText = cuotaE;
-                document.getElementById('cuota-visita').innerText = cuotaV;
-
+                // 9. Actualizar la interfaz
+                actualizarInterfaz({
+                    deporte: deporteDelEvento,
+                    liga: ligaConEvento,
+                    evento: eventoEnVivo,
+                    nombreLocal,
+                    nombreVisita,
+                    cuotas
+                });
+                
                 estadoCarga.style.display = 'none';
+                debugLog('✅ ACTUALIZACIÓN COMPLETADA EXITOSAMENTE');
 
             } catch (error) {
-                console.error("Error: ", error);
+                debugLog('💥 ERROR CRÍTICO EN ACTUALIZACIÓN', error);
+                estadoCarga.innerText = "❌ Error de conexión";
+                console.error("Error en renderizado: ", error);
             } finally {
                 escaneoEnProgreso = false;
             }
         }
 
-        actualizarDatosSolos();
-        setInterval(actualizarDatosSolos, 30000); 
+        // ==========================================
+        // FUNCIÓN PARA MOSTRAR ESTADO VACÍO
+        // ==========================================
+        function mostrarEstadoVacio() {
+            document.getElementById('titulo-liga').innerText = 'RADAR GLOBAL - SIN EVENTOS';
+            document.getElementById('equipo-local').innerText = 'CODERE';
+            document.getElementById('equipo-visita').innerText = 'DEPORTES';
+            document.getElementById('marcador-local').innerText = '-';
+            document.getElementById('marcador-visita').innerText = '-';
+            document.getElementById('label-gana-local').innerText = 'GANA LOCAL';
+            document.getElementById('label-gana-visita').innerText = 'GANA VISITA';
+            document.getElementById('label-empate').innerText = 'EMPATE';
+            document.getElementById('cuota-local').innerText = '0.00';
+            document.getElementById('cuota-empate').innerText = '0.00';
+            document.getElementById('cuota-visita').innerText = '0.00';
+        }
 
+        // ==========================================
+        // FUNCIÓN PARA ACTUALIZAR LA INTERFAZ
+        // ==========================================
+        function actualizarInterfaz(datos) {
+            const { deporte, liga, evento, nombreLocal, nombreVisita, cuotas } = datos;
+            
+            // Título de la liga
+            document.getElementById('titulo-liga').innerText = 
+                `${deporte.Name} - ${liga.Name.substring(0, 20)}`;
+            
+            // Equipos
+            document.getElementById('equipo-local').innerText = nombreLocal.toUpperCase();
+            document.getElementById('equipo-visita').innerText = nombreVisita.toUpperCase();
+            
+            // Marcador
+            document.getElementById('marcador-local').innerText = 
+                evento.HomeScore !== null && evento.HomeScore !== undefined ? evento.HomeScore : '0';
+            document.getElementById('marcador-visita').innerText = 
+                evento.AwayScore !== null && evento.AwayScore !== undefined ? evento.AwayScore : '0';
+            
+            // Etiquetas de apuesta
+            document.getElementById('label-gana-local').innerText = `GANA ${nombreLocal.toUpperCase()}`;
+            document.getElementById('label-gana-visita').innerText = `GANA ${nombreVisita.toUpperCase()}`;
+            document.getElementById('label-empate').innerText = cuotas.textoEmpate;
+            
+            // Cuotas
+            document.getElementById('cuota-local').innerText = cuotas.cuotaL;
+            document.getElementById('cuota-empate').innerText = cuotas.cuotaE;
+            document.getElementById('cuota-visita').innerText = cuotas.cuotaV;
+        }
+
+        // ==========================================
+        // INICIAR EL SISTEMA
+        // ==========================================
+        debugLog('🟢 SISTEMA INICIADO');
+        actualizarDatosSolos();
+        
+        // Actualizar cada 30 segundos
+        setInterval(() => {
+            debugLog('⏰ Actualización programada...');
+            actualizarDatosSolos();
+        }, 30000);
+        
+        // Opcional: También actualizar cada minuto como respaldo
+        setInterval(() => {
+            debugLog('🔄 Actualización de respaldo...');
+            actualizarDatosSolos();
+        }, 60000);
     </script>
 </body>
 </html>
