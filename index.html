@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tablero Codere en Vivo - Doble Partido</title>
+    <title>Tablero Codere en Vivo</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Arial', sans-serif; }
         body { background-color: #111; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
@@ -15,28 +15,20 @@
 
         .league-title { text-align: center; font-size: 11px; font-weight: bold; margin-bottom: 15px; letter-spacing: 0.5px; text-transform: uppercase; color: #00E5FF; }
 
-        /* Contenedor de partidos */
-        .partidos-container { display: flex; flex-direction: column; gap: 15px; }
+        .match-info { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 12px; margin-bottom: 12px; }
+        .team { display: flex; align-items: center; font-size: 11px; font-weight: bold; text-transform: uppercase; width: 38%; }
+        .team.right { justify-content: flex-end; text-align: right; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; margin: 0 5px; flex-shrink: 0; }
+        .dot-local { background-color: #FAFF00; }
+        .dot-visita { background-color: #FF0000; }
+        .score-board { font-size: 18px; font-weight: bold; display: flex; justify-content: center; width: 24%; color: #00E5FF; }
+        .score-board .separator { margin: 0 5px; color: #FFF; }
 
-        /* Cada partido */
-        .partido { border-bottom: 1px solid #333; padding-bottom: 12px; }
-        .partido:last-child { border-bottom: none; padding-bottom: 0; }
-
-        /* Marcador en formato 2-1 */
-        .marcador-principal { text-align: center; font-size: 14px; font-weight: bold; margin-bottom: 8px; color: #FFF; }
-        .equipos-nombre { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; font-size: 10px; text-transform: uppercase; }
-        .equipo-local-nombre { color: #FAFF00; text-align: left; width: 40%; }
-        .equipo-visita-nombre { color: #FF0000; text-align: right; width: 40%; }
-        .marcador-score { text-align: center; font-size: 18px; font-weight: bold; color: #00E5FF; width: 20%; }
-
-        /* Cuotas */
-        .cuotas-container { display: flex; justify-content: space-between; margin-top: 8px; font-size: 10px; }
-        .cuota-item { text-align: center; flex: 1; }
-        .cuota-label { color: #CCC; font-size: 8px; margin-bottom: 3px; }
-        .cuota-valor { color: #FFF; font-size: 12px; font-weight: bold; }
-
+        .odds-title { text-align: center; font-size: 12px; margin-bottom: 10px; color: #ccc; }
+        .odd-row { display: flex; justify-content: space-between; border-bottom: 1px solid #222; padding: 8px 0; font-size: 11px; font-weight: bold; }
+        .odd-row:last-child { border-bottom: none; padding-bottom: 0; }
+        .odd-value { color: #FFF; font-size: 12px; }
         .loading { text-align: center; color: #FAFF00; font-size: 12px; margin-bottom: 10px; }
-        .separador-partidos { border-top: 1px dashed #444; margin: 8px 0; }
     </style>
 </head>
 <body>
@@ -49,8 +41,36 @@
 
             <h3 class="league-title" id="titulo-liga">BUSCANDO...</h3>
 
-            <div class="partidos-container" id="partidos-container">
-                <!-- Los partidos se generan dinámicamente aquí -->
+            <div class="match-info">
+                <div class="team">
+                    <span class="dot dot-local"></span>
+                    <span id="equipo-local">---</span>
+                </div>
+                <div class="score-board">
+                    <span id="marcador-local">0</span>
+                    <span class="separator">-</span>
+                    <span id="marcador-visita">0</span>
+                </div>
+                <div class="team right">
+                    <span id="equipo-visita">---</span>
+                    <span class="dot dot-visita"></span>
+                </div>
+            </div>
+
+            <div class="odds-section">
+                <h4 class="odds-title">OPCIONES DE APUESTA</h4>
+                <div class="odd-row">
+                    <span id="label-gana-local">GANA LOCAL</span>
+                    <span class="odd-value" id="cuota-local">0.00</span>
+                </div>
+                <div class="odd-row">
+                    <span id="label-empate">EMPATE</span>
+                    <span class="odd-value" id="cuota-empate">0.00</span>
+                </div>
+                <div class="odd-row">
+                    <span id="label-gana-visita">GANA VISITA</span>
+                    <span class="odd-value" id="cuota-visita">0.00</span>
+                </div>
             </div>
         </div>
     </div>
@@ -95,7 +115,7 @@
 
         function procesarArrayEventos(arrayEventos) {
             if (!Array.isArray(arrayEventos) || arrayEventos.length === 0) {
-                return { cuotaL: "N/D", cuotaE: "N/D", cuotaV: "N/D", textoEmpate: "EMPATE", esConEmpate: false };
+                return { cuotaL: "N/D", cuotaE: "N/D", cuotaV: "N/D", textoEmpate: "EMPATE" };
             }
             
             const juegos = [];
@@ -113,92 +133,41 @@
                 }
             }
             
-            // Priorizar GameType 1 (Resultado Final - Fútbol), 97 (Ganador del Partido - Baloncesto)
-            let mercadoPrincipal = juegos.find(j => j.GameType === 1) ||
-                                  juegos.find(j => j.GameType === 97) ||
+            // Priorizar GameType 97 (Ganador del Partido) para baloncesto
+            let mercadoPrincipal = juegos.find(j => j.GameType === 97) ||
+                                  juegos.find(j => j.GameType === 1) ||
                                   juegos.find(j => j.GameType === 159) ||
                                   juegos[0];
             
             if (!mercadoPrincipal) {
-                return { cuotaL: "N/D", cuotaE: "N/D", cuotaV: "N/D", textoEmpate: "EMPATE", esConEmpate: false };
+                return { cuotaL: "N/D", cuotaE: "N/D", cuotaV: "N/D", textoEmpate: "EMPATE" };
             }
             
             const resultadosMercado = resultados.filter(r => r.ParentNodeId === mercadoPrincipal.NodeId);
             
             if (resultadosMercado.length === 0) {
-                return { cuotaL: "N/D", cuotaE: "N/D", cuotaV: "N/D", textoEmpate: "EMPATE", esConEmpate: false };
+                return { cuotaL: "N/D", cuotaE: "N/D", cuotaV: "N/D", textoEmpate: "EMPATE" };
             }
             
             let cuotaL = "N/D", cuotaE = "N/D", cuotaV = "N/D";
             let textoEmpate = "EMPATE";
-            let esConEmpate = false;
             
             if (resultadosMercado.length === 2) {
                 cuotaL = resultadosMercado[0].Odd || resultadosMercado[0].Odds || resultadosMercado[0].Price || "N/D";
                 cuotaV = resultadosMercado[1].Odd || resultadosMercado[1].Odds || resultadosMercado[1].Price || "N/D";
                 textoEmpate = "N/A";
                 cuotaE = "-";
-                esConEmpate = false;
             } else if (resultadosMercado.length >= 3) {
                 cuotaL = resultadosMercado[0].Odd || resultadosMercado[0].Odds || resultadosMercado[0].Price || "N/D";
                 cuotaE = resultadosMercado[1].Odd || resultadosMercado[1].Odds || resultadosMercado[1].Price || "N/D";
                 cuotaV = resultadosMercado[2].Odd || resultadosMercado[2].Odds || resultadosMercado[2].Price || "N/D";
-                esConEmpate = true;
             }
             
             if (typeof cuotaL === 'number') cuotaL = cuotaL.toFixed(2);
             if (typeof cuotaE === 'number') cuotaE = cuotaE.toFixed(2);
             if (typeof cuotaV === 'number') cuotaV = cuotaV.toFixed(2);
             
-            return { cuotaL, cuotaE, cuotaV, textoEmpate, esConEmpate };
-        }
-
-        function crearHTMLPartido(evento, cuotas, nombreLocal, nombreVisita) {
-            const marcadorLocal = evento.HomeScore != null ? evento.HomeScore : "0";
-            const marcadorVisita = evento.AwayScore != null ? evento.AwayScore : "0";
-            
-            let htmlCuotas = '';
-            
-            if (cuotas.esConEmpate) {
-                // Fútbol - 3 cuotas: Local, Empate, Visita
-                htmlCuotas = `
-                    <div class="cuotas-container">
-                        <div class="cuota-item">
-                            <div class="cuota-label">GANA ${nombreLocal}</div>
-                            <div class="cuota-valor">${cuotas.cuotaL}</div>
-                        </div>
-                        <div class="cuota-item">
-                            <div class="cuota-label">EMPATE</div>
-                            <div class="cuota-valor">${cuotas.cuotaE}</div>
-                        </div>
-                        <div class="cuota-item">
-                            <div class="cuota-label">GANA ${nombreVisita}</div>
-                            <div class="cuota-valor">${cuotas.cuotaV}</div>
-                        </div>
-                    </div>
-                `;
-            } else {
-                // Baloncesto, Tenis - 2 cuotas: Local, Visita
-                htmlCuotas = `
-                    <div class="cuotas-container">
-                        <div class="cuota-item">
-                            <div class="cuota-label">GANA ${nombreLocal}</div>
-                            <div class="cuota-valor">${cuotas.cuotaL}</div>
-                        </div>
-                        <div class="cuota-item">
-                            <div class="cuota-label">GANA ${nombreVisita}</div>
-                            <div class="cuota-valor">${cuotas.cuotaV}</div>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            return `
-                <div class="partido">
-                    <div class="marcador-principal">${nombreLocal} ${marcadorLocal}-${marcadorVisita} ${nombreVisita}</div>
-                    ${htmlCuotas}
-                </div>
-            `;
+            return { cuotaL, cuotaE, cuotaV, textoEmpate };
         }
 
         async function actualizarDatosSolos() {
@@ -206,11 +175,10 @@
             
             escaneoEnProgreso = true;
             const estadoCarga = document.getElementById('estado-carga');
-            const container = document.getElementById('partidos-container');
 
             try {
                 estadoCarga.style.display = 'block';
-                estadoCarga.innerText = "Buscando partidos...";
+                estadoCarga.innerText = "Buscando deportes...";
 
                 const deportes = await fetchCodere('/sports');
                 if (!deportes || !Array.isArray(deportes)) throw new Error("No se pudieron obtener los deportes");
@@ -218,14 +186,11 @@
                 const deportesTop = ["Fútbol", "Soccer", "Tenis", "Baloncesto", "Esports", "Tenis de Mesa", "Béisbol"];
                 const deportesActivos = deportes.filter(d => deportesTop.includes(d.Name));
 
-                let eventosEncontrados = [];
-                let deporteSeleccionado = null;
-                let ligaSeleccionada = null;
+                let eventoEnVivo = null;
+                let ligaConEvento = null;
+                let deporteDelEvento = null;
 
-                // Buscar eventos en vivo
                 for (let deporte of deportesActivos) {
-                    if (eventosEncontrados.length >= 2) break;
-                    
                     estadoCarga.innerText = `Cargando ${deporte.Name}...`;
                     
                     const paisesResponse = await fetchCodere(`/sports/${deporte.NodeId}/leagues`);
@@ -234,7 +199,7 @@
                     const ligasReales = extraerLigasDePaises(paisesResponse);
                     if (ligasReales.length === 0) continue;
                     
-                    const palabrasClave = ["LIGA MX", "PREMIER", "AMISTOSOS", "INTERNACIONAL", "NBA", "WNBA", "PRO"];
+                    const palabrasClave = ["AMISTOSOS", "INTERNACIONAL", "ESPORTS", "MESA", "LIGA MX", "PRO", "PREMIER", "NBA", "WNBA"];
                     ligasReales.sort((a, b) => {
                         const nombreA = (a.Name || '').toUpperCase();
                         const nombreB = (b.Name || '').toUpperCase();
@@ -246,7 +211,6 @@
                     const ligasARevisar = ligasReales.slice(0, 10);
                     
                     for (let liga of ligasARevisar) {
-                        if (eventosEncontrados.length >= 2) break;
                         if (!liga.NodeId) continue;
                         
                         estadoCarga.innerText = `Revisando: ${liga.Name?.substring(0, 15)}...`;
@@ -254,66 +218,68 @@
                         const eventos = await fetchCodere(`/leagues/${liga.NodeId}/liveEvents`);
                         
                         if (eventos && Array.isArray(eventos) && eventos.length > 0) {
-                            // Tomar hasta 2 eventos de esta liga
-                            const eventosTomar = eventos.slice(0, 2 - eventosEncontrados.length);
-                            
-                            for (let evento of eventosTomar) {
-                                const arrayEventos = await fetchCodere(`/events/${evento.NodeId}`);
-                                const cuotas = procesarArrayEventos(arrayEventos);
-                                
-                                const equipos = evento.Name ? evento.Name.split(" - ") : ["LOCAL", "VISITA"];
-                                const nombreLocal = equipos[0] ? equipos[0].substring(0, 15).trim() : "LOCAL";
-                                const nombreVisita = equipos[1] ? equipos[1].substring(0, 15).trim() : "VISITA";
-                                
-                                eventosEncontrados.push({
-                                    evento,
-                                    cuotas,
-                                    nombreLocal,
-                                    nombreVisita
-                                });
-                                
-                                if (!deporteSeleccionado) deporteSeleccionado = deporte;
-                                if (!ligaSeleccionada) ligaSeleccionada = liga;
-                                
-                                if (eventosEncontrados.length >= 2) break;
-                            }
+                            eventoEnVivo = eventos[0];
+                            ligaConEvento = liga;
+                            deporteDelEvento = deporte;
+                            break;
                         }
                     }
+                    
+                    if (eventoEnVivo) break;
                 }
 
-                if (eventosEncontrados.length === 0) {
-                    container.innerHTML = '<div style="text-align:center;color:#CCC;font-size:12px;">SIN EVENTOS EN VIVO</div>';
-                    document.getElementById('titulo-liga').innerText = 'RADAR GLOBAL - SIN EVENTOS';
+                if (!eventoEnVivo) {
+                    mostrarEstadoVacio();
                     estadoCarga.style.display = 'none';
                     escaneoEnProgreso = false;
                     return;
                 }
 
-                // Actualizar título de liga
-                if (ligaSeleccionada && deporteSeleccionado) {
-                    document.getElementById('titulo-liga').innerText = 
-                        `${deporteSeleccionado.Name} - ${ligaSeleccionada.Name.substring(0, 20)}`;
-                }
-
-                // Generar HTML de los partidos
-                let htmlPartidos = '';
-                eventosEncontrados.forEach((item, index) => {
-                    if (index > 0) {
-                        htmlPartidos += '<div class="separador-partidos"></div>';
-                    }
-                    htmlPartidos += crearHTMLPartido(item.evento, item.cuotas, item.nombreLocal, item.nombreVisita);
-                });
+                const equipos = eventoEnVivo.Name ? eventoEnVivo.Name.split(" - ") : ["LOCAL", "VISITA"];
+                const nombreLocal = equipos[0] ? equipos[0].substring(0, 15).trim() : "LOCAL";
+                const nombreVisita = equipos[1] ? equipos[1].substring(0, 15).trim() : "VISITA";
                 
-                container.innerHTML = htmlPartidos;
+                estadoCarga.innerText = "Cargando cuotas...";
+                
+                const arrayEventos = await fetchCodere(`/events/${eventoEnVivo.NodeId}`);
+                const cuotas = procesarArrayEventos(arrayEventos);
+
+                document.getElementById('titulo-liga').innerText = `${deporteDelEvento.Name} - ${ligaConEvento.Name.substring(0, 20)}`;
+                document.getElementById('equipo-local').innerText = nombreLocal.toUpperCase();
+                document.getElementById('equipo-visita').innerText = nombreVisita.toUpperCase();
+                document.getElementById('marcador-local').innerText = eventoEnVivo.HomeScore != null ? eventoEnVivo.HomeScore : "0";
+                document.getElementById('marcador-visita').innerText = eventoEnVivo.AwayScore != null ? eventoEnVivo.AwayScore : "0";
+                
+                document.getElementById('label-gana-local').innerText = `GANA ${nombreLocal.toUpperCase()}`;
+                document.getElementById('label-gana-visita').innerText = `GANA ${nombreVisita.toUpperCase()}`;
+                document.getElementById('label-empate').innerText = cuotas.textoEmpate;
+                
+                document.getElementById('cuota-local').innerText = cuotas.cuotaL;
+                document.getElementById('cuota-empate').innerText = cuotas.cuotaE;
+                document.getElementById('cuota-visita').innerText = cuotas.cuotaV;
+                
                 estadoCarga.style.display = 'none';
 
             } catch (error) {
                 console.error("Error en renderizado: ", error);
                 estadoCarga.innerText = "Error de conexión";
-                container.innerHTML = '<div style="text-align:center;color:#F00;font-size:12px;">ERROR DE CONEXIÓN</div>';
             } finally {
                 escaneoEnProgreso = false;
             }
+        }
+
+        function mostrarEstadoVacio() {
+            document.getElementById('titulo-liga').innerText = 'RADAR GLOBAL - SIN EVENTOS';
+            document.getElementById('equipo-local').innerText = 'CODERE';
+            document.getElementById('equipo-visita').innerText = 'DEPORTES';
+            document.getElementById('marcador-local').innerText = '-';
+            document.getElementById('marcador-visita').innerText = '-';
+            document.getElementById('label-gana-local').innerText = 'GANA LOCAL';
+            document.getElementById('label-gana-visita').innerText = 'GANA VISITA';
+            document.getElementById('label-empate').innerText = 'EMPATE';
+            document.getElementById('cuota-local').innerText = '0.00';
+            document.getElementById('cuota-empate').innerText = '0.00';
+            document.getElementById('cuota-visita').innerText = '0.00';
         }
 
         actualizarDatosSolos();
