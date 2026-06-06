@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tablero Codere en Vivo (Escáner Total)</title>
+    <title>Tablero Codere en Vivo (Escáner Seguro)</title>
     <style>
         /* ==========================================
            ESTILOS CSS
@@ -40,7 +40,7 @@
         <img src="https://jxwdncxtnhmrufvdxuti.supabase.co/storage/v1/object/public/banners-publicos/WhatsApp%20Image%202026-06-05%20at%2012.17.23%20PM.jpeg" alt="Fondo Promocional" class="fondo-img">
 
         <div class="data-overlay" id="widget-datos">
-            <div id="estado-carga" class="loading">Iniciando escáner profundo...</div>
+            <div id="estado-carga" class="loading">Iniciando conexión segura...</div>
 
             <h3 class="league-title" id="titulo-liga">BUSCANDO...</h3>
 
@@ -104,54 +104,51 @@
 
             try {
                 estadoCarga.style.display = 'block';
-                estadoCarga.innerText = "Conectando al catálogo...";
+                estadoCarga.innerText = "Buscando deportes...";
 
                 const deportes = await fetchCodere('/sports');
-                if (!deportes) throw new Error("Conectando...");
+                if (!deportes) throw new Error("Reconectando...");
 
-                // Priorizamos Fútbol siempre que sea posible, luego los demás
-                const deportesActivos = deportes.filter(d => 
-                    ["Fútbol", "Soccer", "Tenis", "Baloncesto", "Esports", "Tenis de Mesa"].includes(d.Name)
-                );
+                // Deportes principales donde siempre hay eventos en vivo
+                const deportesTop = ["Fútbol", "Soccer", "Tenis", "Baloncesto", "Esports", "Tenis de Mesa", "Béisbol"];
+                const deportesActivos = deportes.filter(d => deportesTop.includes(d.Name));
 
                 let eventoEnVivo = null;
                 let ligaConEvento = null;
                 let deporteDelEvento = null;
 
+                // Escaneo secuencial para evitar que Codere nos bloquee (GET ---)
                 for (let deporte of deportesActivos) {
-                    estadoCarga.innerText = `Mapeando ${deporte.Name}...`;
                     const ligas = await fetchCodere(`/sports/${deporte.NodeId}/leagues`);
                     if (!ligas) continue;
 
-                    // 1. ALGORITMO DE PRIORIDAD: Ponemos las ligas importantes al inicio de la lista
-                    const palabrasClave = ["AMISTOSOS", "INTERNACIONAL", "LIGA MX", "PRIMERA", "ESPORTS", "CHAMPIONS"];
+                    // Ordenamos para que las ligas que suelen tener partidos en vivo queden arriba
+                    const palabrasClave = ["AMISTOSOS", "INTERNACIONAL", "ESPORTS", "MESA", "PRO", "LIGA"];
                     ligas.sort((a, b) => {
                         const prioA = palabrasClave.some(k => a.Name.toUpperCase().includes(k)) ? 1 : 0;
                         const prioB = palabrasClave.some(k => b.Name.toUpperCase().includes(k)) ? 1 : 0;
                         return prioB - prioA;
                     });
 
-                    // 2. ESCANEO POR LOTES (Chunking): Buscamos de 5 en 5 para no crashear la red
-                    for (let i = 0; i < ligas.length; i += 5) {
-                        estadoCarga.innerText = `Buscando en vivo (${i+1}/${ligas.length})...`;
-                        const lote = ligas.slice(i, i + 5);
-                        
-                        const promesas = lote.map(liga => fetchCodere(`/leagues/${liga.NodeId}/liveEvents`));
-                        const resultados = await Promise.all(promesas);
+                    // Tomamos máximo 12 ligas por deporte para que el escaneo sea rápido
+                    const ligasARevisar = ligas.slice(0, 12);
 
-                        for (let j = 0; j < resultados.length; j++) {
-                            if (resultados[j] && resultados[j].length > 0) {
-                                eventoEnVivo = resultados[j][0];
-                                ligaConEvento = lote[j];
-                                deporteDelEvento = deporte;
-                                break; 
-                            }
+                    for (let liga of ligasARevisar) {
+                        estadoCarga.innerText = `Revisando: ${liga.Name.substring(0, 15)}...`;
+                        const eventos = await fetchCodere(`/leagues/${liga.NodeId}/liveEvents`);
+                        
+                        // Si encontramos un partido que se está jugando en este momento
+                        if (eventos && eventos.length > 0) {
+                            eventoEnVivo = eventos[0];
+                            ligaConEvento = liga;
+                            deporteDelEvento = deporte;
+                            break; // Detenemos la búsqueda de ligas
                         }
-                        if (eventoEnVivo) break; // Rompe el ciclo de lotes
                     }
-                    if (eventoEnVivo) break; // Rompe el ciclo de deportes
+                    if (eventoEnVivo) break; // Detenemos la búsqueda de deportes
                 }
 
+                // Fallback si a esta hora exacta no hay literalmente ningún evento en vivo en el mundo
                 if (!eventoEnVivo) {
                     document.getElementById('titulo-liga').innerText = `RADAR GLOBAL - SIN EVENTOS`;
                     document.getElementById('equipo-local').innerText = "CODERE";
@@ -162,22 +159,21 @@
                     document.getElementById('cuota-empate').innerText = "0.00";
                     document.getElementById('cuota-visita').innerText = "0.00";
                     estadoCarga.style.display = 'none';
+                    escaneoEnProgreso = false;
                     return; 
                 }
 
-                // Extracción de nombres (Cortados para diseño)
+                // Extracción de datos
                 const equipos = eventoEnVivo.Name.split(" - ");
                 const nombreLocal = equipos[0] ? equipos[0].substring(0, 15).trim() : "LOCAL"; 
                 const nombreVisita = equipos[1] ? equipos[1].substring(0, 15).trim() : "VISITA";
 
-                // Extracción de Cuotas
                 const detallesEvento = await fetchCodere(`/events/${eventoEnVivo.NodeId}`);
                 const mercadoPrincipal = detallesEvento ? detallesEvento.Games[0] : null; 
 
                 let cuotaL = "N/D", cuotaE = "N/D", cuotaV = "N/D";
                 let textoEmpate = "EMPATE";
 
-                // Codere usa números positivos/negativos para momios americanos, o decimales. El API manda Odds.
                 if (mercadoPrincipal && mercadoPrincipal.Results) {
                     if (mercadoPrincipal.Results.length === 2) {
                         cuotaL = mercadoPrincipal.Results[0].Odds.toFixed(2);
@@ -192,7 +188,7 @@
                 }
 
                 // Inyección Visual
-                document.getElementById('titulo-liga').innerText = `${deporteDelEvento.Name} - ${ligaConEvento.Name.substring(0, 25)}`;
+                document.getElementById('titulo-liga').innerText = `${deporteDelEvento.Name} - ${ligaConEvento.Name.substring(0, 20)}`;
                 document.getElementById('equipo-local').innerText = nombreLocal.toUpperCase();
                 document.getElementById('equipo-visita').innerText = nombreVisita.toUpperCase();
 
@@ -212,6 +208,7 @@
             } catch (error) {
                 console.error("Error en renderizado: ", error);
             } finally {
+                // Desbloqueamos el candado
                 escaneoEnProgreso = false;
             }
         }
