@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tablero Codere en Vivo (Estructura Corregida)</title>
+    <title>Tablero Codere en Vivo (FINAL CORREGIDO)</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Arial', sans-serif; }
         body { background-color: #111; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
@@ -120,7 +120,7 @@
         }
 
         // ==========================================
-        // FUNCIÓN PARA PROCESAR EL ARRAY DE EVENTOS
+        // FUNCIÓN CORREGIDA PARA PROCESAR EL ARRAY DE EVENTOS
         // ==========================================
         function procesarArrayEventos(arrayEventos) {
             if (!Array.isArray(arrayEventos) || arrayEventos.length === 0) {
@@ -131,7 +131,6 @@
             console.log(`📊 Procesando array de ${arrayEventos.length} elementos`);
             
             // Clasificar elementos por tipo
-            const eventos = [];
             const juegos = [];
             const resultados = [];
             
@@ -140,42 +139,43 @@
                 
                 const value = item.Value;
                 const tipo = value.Type;
-                const eventNodeTypeId = value.EventNodeTypeId;
                 
-                if (tipo === "Event" || eventNodeTypeId === 10) {
-                    eventos.push(value);
-                } else if (tipo === "Game" || eventNodeTypeId === 11) {
+                if (tipo === "Game") {
                     juegos.push(value);
-                } else if (tipo === "Result" || eventNodeTypeId === 12) {
+                } else if (tipo === "Result") {
                     resultados.push(value);
                 }
             }
             
-            console.log(`📊 Encontrados: ${eventos.length} eventos, ${juegos.length} juegos, ${resultados.length} resultados`);
+            console.log(`📊 Encontrados: ${juegos.length} juegos, ${resultados.length} resultados`);
             
-            // Buscar el mercado principal (GameType = 1 suele ser "Resultado Final" o similar)
-            // Para baloncesto, el mercado principal generalmente es GameType = 159 (Money Line)
+            // Buscar el mercado principal - PRIORIZAR GameType 97 (Ganador del Partido)
             let mercadoPrincipal = null;
             
-            // Priorizar GameType 1 (Resultado Final) o 159 (Money Line)
-            for (let juego of juegos) {
-                if (juego.GameType === 1 || juego.GameType === 159) {
-                    mercadoPrincipal = juego;
-                    console.log(`✅ Encontrado mercado principal: GameType ${juego.GameType} - ${juego.NodeName}`);
-                    break;
-                }
+            // 1. Buscar GameType 97 (Ganador del Partido) - Es el mercado principal de apuestas
+            mercadoPrincipal = juegos.find(j => j.GameType === 97);
+            
+            // 2. Si no hay GameType 97, buscar GameType 1 (Resultado Final - Fútbol)
+            if (!mercadoPrincipal) {
+                mercadoPrincipal = juegos.find(j => j.GameType === 1);
             }
             
-            // Si no encontramos los tipos específicos, tomar el primer juego
+            // 3. Si no hay, buscar GameType 159 (Money Line/Hándicap)
+            if (!mercadoPrincipal) {
+                mercadoPrincipal = juegos.find(j => j.GameType === 159);
+            }
+            
+            // 4. Si no hay ninguno, usar el primer juego disponible
             if (!mercadoPrincipal && juegos.length > 0) {
                 mercadoPrincipal = juegos[0];
-                console.log(`⚠️ Usando primer juego disponible: GameType ${mercadoPrincipal.GameType} - ${mercadoPrincipal.NodeName}`);
             }
             
             if (!mercadoPrincipal) {
                 console.log('❌ No se encontraron juegos/mercados');
                 return { cuotaL: "N/D", cuotaE: "N/D", cuotaV: "N/D", textoEmpate: "EMPATE" };
             }
+            
+            console.log(`✅ Mercado principal: GameType ${mercadoPrincipal.GameType} - ${mercadoPrincipal.NodeName}`);
             
             // Buscar resultados que pertenezcan a este mercado
             const resultadosMercado = resultados.filter(r => r.ParentNodeId === mercadoPrincipal.NodeId);
@@ -187,7 +187,7 @@
                 return { cuotaL: "N/D", cuotaE: "N/D", cuotaV: "N/D", textoEmpate: "EMPATE" };
             }
             
-            // Procesar resultados
+            // Procesar resultados - USAR Odd (en singular)
             let cuotaL = "N/D", cuotaE = "N/D", cuotaV = "N/D";
             let textoEmpate = "EMPATE";
             
@@ -196,8 +196,9 @@
                 const res1 = resultadosMercado[0];
                 const res2 = resultadosMercado[1];
                 
-                cuotaL = res1.Odds || res1.Price || "N/D";
-                cuotaV = res2.Odds || res2.Price || "N/D";
+                // IMPORTANTE: Usar Odd (singular), no Odds
+                cuotaL = res1.Odd || res1.Odds || res1.Price || "N/D";
+                cuotaV = res2.Odd || res2.Odds || res2.Price || "N/D";
                 textoEmpate = "N/A";
                 cuotaE = "-";
                 
@@ -208,9 +209,9 @@
                 const res2 = resultadosMercado[1];
                 const res3 = resultadosMercado[2];
                 
-                cuotaL = res1.Odds || res1.Price || "N/D";
-                cuotaE = res2.Odds || res2.Price || "N/D";
-                cuotaV = res3.Odds || res3.Price || "N/D";
+                cuotaL = res1.Odd || res1.Odds || res1.Price || "N/D";
+                cuotaE = res2.Odd || res2.Odds || res2.Price || "N/D";
+                cuotaV = res3.Odd || res3.Odds || res3.Price || "N/D";
                 
                 console.log(`🎯 Cuotas (3 resultados): L=${cuotaL}, E=${cuotaE}, V=${cuotaV}`);
             }
@@ -307,8 +308,10 @@
                 document.getElementById('titulo-liga').innerText = `${deporteDelEvento.Name} - ${ligaConEvento.Name.substring(0, 20)}`;
                 document.getElementById('equipo-local').innerText = nombreLocal.toUpperCase();
                 document.getElementById('equipo-visita').innerText = nombreVisita.toUpperCase();
-                document.getElementById('marcador-local').innerText = eventoEnVivo.HomeScore !== null ? eventoEnVivo.HomeScore : "0";
-                document.getElementById('marcador-visita').innerText = eventoEnVivo.AwayScore !== null ? eventoEnVivo.AwayScore : "0";
+                
+                // Usar HomeScore y AwayScore del evento original
+                document.getElementById('marcador-local').innerText = eventoEnVivo.HomeScore != null ? eventoEnVivo.HomeScore : "0";
+                document.getElementById('marcador-visita').innerText = eventoEnVivo.AwayScore != null ? eventoEnVivo.AwayScore : "0";
                 
                 document.getElementById('label-gana-local').innerText = `GANA ${nombreLocal.toUpperCase()}`;
                 document.getElementById('label-gana-visita').innerText = `GANA ${nombreVisita.toUpperCase()}`;
