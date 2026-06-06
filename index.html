@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tablero Codere en Vivo (Global sin límites)</title>
+    <title>Tablero Codere en Vivo (Optimizado)</title>
     <style>
         /* ==========================================
            ESTILOS CSS
@@ -40,7 +40,7 @@
         <img src="https://jxwdncxtnhmrufvdxuti.supabase.co/storage/v1/object/public/banners-publicos/WhatsApp%20Image%202026-06-05%20at%2012.17.23%20PM.jpeg" alt="Fondo Promocional" class="fondo-img">
 
         <div class="data-overlay" id="widget-datos">
-            <div id="estado-carga" class="loading">Cazando eventos en vivo...</div>
+            <div id="estado-carga" class="loading">Iniciando escaneo rápido...</div>
 
             <h3 class="league-title" id="titulo-liga">BUSCANDO...</h3>
 
@@ -82,6 +82,9 @@
     </div>
 
     <script>
+        // Candado para evitar embotellamientos de red
+        let escaneoEnProgreso = false;
+
         async function fetchCodere(endpoint) {
             try {
                 const response = await fetch(`/api/proxy?endpoint=${encodeURIComponent(endpoint)}`);
@@ -90,49 +93,58 @@
                 if (!response.ok) throw new Error(`Codere Status: ${response.status}`);
                 return data;
             } catch (error) {
-                throw error; 
+                return null; // Retornamos null en lugar de romper el código para poder seguir iterando
             }
         }
 
         async function actualizarDatosSolos() {
+            if (escaneoEnProgreso) return; // Si ya está buscando, ignoramos el ciclo del reloj
+            escaneoEnProgreso = true;
+            
             const estadoCarga = document.getElementById('estado-carga');
 
             try {
                 estadoCarga.style.display = 'block';
-                estadoCarga.innerText = "Cazando eventos en vivo...";
+                estadoCarga.innerText = "Cazando eventos...";
 
                 const deportes = await fetchCodere('/sports');
                 if (!deportes) throw new Error("Conectando...");
 
                 const deportesActivos = deportes.filter(d => 
-                    ["Fútbol", "Tenis", "Baloncesto", "Tenis de Mesa", "Esports", "Béisbol", "Voleibol"].includes(d.Name)
+                    ["Fútbol", "Tenis", "Baloncesto", "Tenis de Mesa", "Esports", "Béisbol"].includes(d.Name)
                 );
 
                 let eventoEnVivo = null;
                 let ligaConEvento = null;
                 let deporteDelEvento = null;
 
-                // Barrido intensivo buscando SÓLO eventos en vivo
+                // Búsqueda Optimizada Paralela
                 for (let deporte of deportesActivos) {
                     estadoCarga.innerText = `Revisando ${deporte.Name}...`;
                     const ligas = await fetchCodere(`/sports/${deporte.NodeId}/leagues`);
                     if (!ligas) continue;
 
-                    // Escanea todas las ligas disponibles de cada deporte
-                    for (let liga of ligas) {
-                        const eventos = await fetchCodere(`/leagues/${liga.NodeId}/liveEvents`);
-                        
+                    // Tomamos las primeras 25 ligas activas (suficiente para agarrar lo principal sin saturar)
+                    const ligasTop = ligas.slice(0, 25);
+                    
+                    // Disparamos las búsquedas al mismo tiempo en lugar de una por una
+                    const promesasEventos = ligasTop.map(liga => fetchCodere(`/leagues/${liga.NodeId}/liveEvents`));
+                    const resultadosParalelos = await Promise.all(promesasEventos);
+
+                    // Revisamos cuál de esas 25 consultas trajo un partido
+                    for (let i = 0; i < resultadosParalelos.length; i++) {
+                        const eventos = resultadosParalelos[i];
                         if (eventos && eventos.length > 0) {
                             eventoEnVivo = eventos[0];
-                            ligaConEvento = liga;
+                            ligaConEvento = ligasTop[i];
                             deporteDelEvento = deporte;
-                            break; // Detiene la búsqueda de ligas
+                            break; 
                         }
                     }
-                    if (eventoEnVivo) break; // Detiene la búsqueda de deportes
+
+                    if (eventoEnVivo) break; 
                 }
 
-                // Mecanismo de respaldo
                 if (!eventoEnVivo) {
                     document.getElementById('titulo-liga').innerText = `RADAR GLOBAL - SIN EVENTOS`;
                     document.getElementById('equipo-local').innerText = "CODERE";
@@ -143,16 +155,17 @@
                     document.getElementById('cuota-empate').innerText = "0.00";
                     document.getElementById('cuota-visita').innerText = "0.00";
                     estadoCarga.style.display = 'none';
+                    escaneoEnProgreso = false;
                     return; 
                 }
 
-                // Extracción de datos
+                // Extracción y renderizado
                 const equipos = eventoEnVivo.Name.split(" - ");
                 const nombreLocal = equipos[0] ? equipos[0].substring(0, 12).trim() : "LOCAL"; 
                 const nombreVisita = equipos[1] ? equipos[1].substring(0, 12).trim() : "VISITA";
 
                 const detallesEvento = await fetchCodere(`/events/${eventoEnVivo.NodeId}`);
-                const mercadoPrincipal = detallesEvento.Games[0]; 
+                const mercadoPrincipal = detallesEvento ? detallesEvento.Games[0] : null; 
 
                 let cuotaL = "N/D", cuotaE = "N/D", cuotaV = "N/D";
                 let textoEmpate = "EMPATE";
@@ -160,7 +173,7 @@
                 if (mercadoPrincipal && mercadoPrincipal.Results) {
                     if (mercadoPrincipal.Results.length === 2) {
                         cuotaL = mercadoPrincipal.Results[0].Odds.toFixed(2);
-                        textoEmpate = "N/A (SIN EMPATE)";
+                        textoEmpate = "N/A";
                         cuotaE = "-";
                         cuotaV = mercadoPrincipal.Results[1].Odds.toFixed(2);
                     } else if (mercadoPrincipal.Results.length >= 3) {
@@ -170,18 +183,14 @@
                     }
                 }
 
-                // Inyección visual
                 document.getElementById('titulo-liga').innerText = `${deporteDelEvento.Name} - ${ligaConEvento.Name.substring(0, 20)}`;
                 document.getElementById('equipo-local').innerText = nombreLocal.toUpperCase();
                 document.getElementById('equipo-visita').innerText = nombreVisita.toUpperCase();
-
                 document.getElementById('marcador-local').innerText = eventoEnVivo.HomeScore || "0";
                 document.getElementById('marcador-visita').innerText = eventoEnVivo.AwayScore || "0";
-
                 document.getElementById('label-gana-local').innerText = `GANA ${nombreLocal.toUpperCase()}`;
                 document.getElementById('label-gana-visita').innerText = `GANA ${nombreVisita.toUpperCase()}`;
                 document.getElementById('label-empate').innerText = textoEmpate;
-
                 document.getElementById('cuota-local').innerText = cuotaL;
                 document.getElementById('cuota-empate').innerText = cuotaE;
                 document.getElementById('cuota-visita').innerText = cuotaV;
@@ -189,9 +198,10 @@
                 estadoCarga.style.display = 'none';
 
             } catch (error) {
-                console.error(error);
-                estadoCarga.innerText = "ESPERANDO CONEXIÓN...";
-                estadoCarga.style.color = "#ccc";
+                console.error("Error en renderizado: ", error);
+            } finally {
+                // Liberamos el candado pase lo que pase
+                escaneoEnProgreso = false;
             }
         }
 
