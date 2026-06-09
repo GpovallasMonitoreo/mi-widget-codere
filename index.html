@@ -11,24 +11,25 @@
         .pantalla-display { position: relative; width: 325px; height: 960px; background-color: #000; overflow: hidden; box-shadow: 0px 0px 20px rgba(0,0,0,0.5); }
         .fondo-img { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1; }
 
-        .data-overlay { position: absolute; z-index: 2; top: 54%; left: 50%; transform: translateX(-50%); width: 70%; background-color: rgba(15, 25, 30, 0.95); border-radius: 12px; padding: 15px; color: #FFF; }
+        .data-overlay { position: absolute; z-index: 2; top: 56.5%; left: 50%; transform: translateX(-50%); width: 84%; background-color: rgba(15, 25, 30, 0.95); border-radius: 10px; padding: 12px; color: #FFF; }
 
-        .league-title { text-align: center; font-size: 11px; font-weight: bold; margin-bottom: 15px; letter-spacing: 0.5px; text-transform: uppercase; color: #00E5FF; }
+        .league-title { text-align: center; font-size: 10px; font-weight: bold; margin-bottom: 10px; letter-spacing: 0.5px; text-transform: uppercase; color: #00E5FF; }
 
-        .match-info { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 12px; margin-bottom: 12px; }
-        .team { display: flex; align-items: center; font-size: 11px; font-weight: bold; text-transform: uppercase; width: 38%; }
+        .match-info { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 8px; margin-bottom: 8px; }
+        .team { display: flex; align-items: center; font-size: 10px; font-weight: bold; text-transform: uppercase; width: 38%; }
         .team.right { justify-content: flex-end; text-align: right; }
-        .dot { width: 10px; height: 10px; border-radius: 50%; margin: 0 5px; flex-shrink: 0; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; margin: 0 4px; flex-shrink: 0; }
         .dot-local { background-color: #FAFF00; }
         .dot-visita { background-color: #FF0000; }
-        .score-board { font-size: 18px; font-weight: bold; display: flex; justify-content: center; width: 24%; color: #00E5FF; }
-        .score-board .separator { margin: 0 5px; color: #FFF; }
+        .score-board { font-size: 16px; font-weight: bold; display: flex; justify-content: center; width: 24%; color: #00E5FF; }
+        .score-board .separator { margin: 0 4px; color: #FFF; }
 
-        .odds-title { text-align: center; font-size: 12px; margin-bottom: 10px; color: #ccc; }
-        .odd-row { display: flex; justify-content: space-between; border-bottom: 1px solid #222; padding: 8px 0; font-size: 11px; font-weight: bold; }
+        .odds-section { display: flex; flex-direction: column; }
+        .odds-title { text-align: center; font-size: 10px; margin-bottom: 6px; color: #ccc; letter-spacing: 0.5px; }
+        .odd-row { display: flex; justify-content: space-between; border-bottom: 1px solid #222; padding: 6px 0; font-size: 10px; font-weight: bold; }
         .odd-row:last-child { border-bottom: none; padding-bottom: 0; }
-        .odd-value { color: #FFF; font-size: 12px; }
-        .loading { text-align: center; color: #FAFF00; font-size: 12px; margin-bottom: 10px; }
+        .odd-value { color: #FFF; font-size: 11px; }
+        .loading { text-align: center; color: #FAFF00; font-size: 11px; margin-bottom: 8px; position: absolute; top: -20px; left: 50%; transform: translateX(-50%); width: 100%; }
     </style>
 </head>
 <body>
@@ -133,7 +134,6 @@
                 }
             }
             
-            // Priorizar GameType 97 (Ganador del Partido) para baloncesto
             let mercadoPrincipal = juegos.find(j => j.GameType === 97) ||
                                   juegos.find(j => j.GameType === 1) ||
                                   juegos.find(j => j.GameType === 159) ||
