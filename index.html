@@ -3,78 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tablero Codere en Vivo</title>
+    <title>Tablero Codere - MEX vs RSA</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Arial', sans-serif; }
-        
-        body { 
-            background-color: #111; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            min-height: 100vh; 
-            overflow: hidden; 
-        }
+        body { background-color: #111; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
 
-        .pantalla-display { 
-            position: relative; 
-            width: 100%; 
-            max-width: 400px; 
-            height: 100vh; 
-            background-color: #000; 
-            overflow: hidden; 
-            box-shadow: 0px 0px 20px rgba(0,0,0,0.5); 
-        }
-
-        .fondo-img { 
-            width: 100%; 
-            height: 100%; 
-            object-fit: cover; 
-            object-position: center; 
-            position: absolute; 
-            top: 0; 
-            left: 0; 
-            z-index: 1; 
-        }
+        .pantalla-display { position: relative; width: 325px; height: 960px; background-color: #000; overflow: hidden; box-shadow: 0px 0px 20px rgba(0,0,0,0.5); }
+        .fondo-img { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1; }
 
         .data-overlay { 
             position: absolute; 
             z-index: 2; 
-            top: 64%; 
+            top: 65%; 
             left: 50%; 
             transform: translateX(-50%); 
-            width: 84%;
-            height: auto; 
+            width: 88%; 
             background-color: #171f24; 
-            border-radius: 12px; 
-            padding: 15px 12px; 
+            border-radius: 8px; 
+            padding: 15px 20px; 
             color: #FFF; 
         }
 
-        /* Título eliminado según requerimiento */
-
-        .match-info { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #7bc100; padding-bottom: 5px; margin-bottom: 5px; }
-        .match-info.no-border { border-bottom: none; padding-bottom: 0; margin-bottom: 10px; }
+        .match-info { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            border-bottom: 1px solid #7bc100; 
+            padding-bottom: 12px; 
+            margin-bottom: 15px; 
+        }
         
-        .team { display: flex; align-items: center; font-size: 20px; font-weight: bold; text-transform: uppercase; width: 42%; }
+        .team { display: flex; align-items: center; font-size: 18px; font-weight: bold; text-transform: uppercase; width: 40%; }
         .team.right { justify-content: flex-end; text-align: right; }
         
-        .dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
-        .team:not(.right) .dot { margin-right: 6px; }
-        .team.right .dot { margin-left: 6px; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; margin: 0 8px; flex-shrink: 0; }
+        .dot-local { background-color: #009900; } 
+        .dot-visita { background-color: #FFD700; } 
         
-        /* Colores adaptados para MEX vs RSA */
-        .dot-local-1 { background-color: #006847; } 
-        .dot-visita-1 { background-color: #FFB81C; }
-        
-        .score-board { font-size: 40px; font-weight: bold; display: flex; justify-content: center; width: 16%; color: #FFF; }
-        .score-board .separator { margin: 0 3px; color: #FFF; }
+        .score-board { font-size: 32px; font-weight: bold; display: flex; justify-content: center; width: 20%; color: #FFF; }
+        .score-board .separator { margin: 0 6px; color: #FFF; }
 
         .odds-section { display: flex; flex-direction: column; }
-        .odds-title { text-align: center; font-size: 15px; font-weight: bold; margin-bottom: 6px; color: #FFF; letter-spacing: 0.3px; }
-        .odd-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #7bc100; padding: 5px 0; font-size: 20px; font-weight: bold; text-transform: uppercase; }
+        .odds-title { text-align: center; font-size: 14px; margin-bottom: 12px; color: #FFF; font-weight: bold; text-transform: uppercase; }
+        
+        .odd-row { 
+            display: flex; 
+            justify-content: space-between; 
+            border-bottom: 1px solid #7bc100; 
+            padding: 8px 0; 
+            font-size: 16px; 
+            font-weight: bold; 
+        }
         .odd-row:last-child { border-bottom: none; padding-bottom: 0; }
-        .odd-value { color: #FFF; font-size: 30px; }
+        .odd-value { color: #FFF; font-size: 20px; }
     </style>
 </head>
 <body>
@@ -83,27 +64,26 @@
         <img src="https://jxwdncxtnhmrufvdxuti.supabase.co/storage/v1/object/public/banners-publicos/WhatsApp%20Image%202026-06-09%20at%208.40.30%20PM.jpeg" alt="Fondo Promocional" class="fondo-img">
 
         <div class="data-overlay" id="widget-datos">
-            
-            <div class="match-info no-border" id="partido-1">
+            <div class="match-info">
                 <div class="team">
-                    <span class="dot dot-local-1"></span>
-                    <span id="equipo-local-1">MÉXICO</span>
+                    <span class="dot dot-local"></span>
+                    <span id="equipo-local">MEX</span>
                 </div>
                 <div class="score-board">
-                    <span id="marcador-local-1">-</span>
+                    <span id="marcador-local">-</span>
                     <span class="separator">-</span>
-                    <span id="marcador-visita-1">-</span>
+                    <span id="marcador-visita">-</span>
                 </div>
                 <div class="team right">
-                    <span id="equipo-visita-1">SUDÁFRICA</span>
-                    <span class="dot dot-visita-1"></span>
+                    <span id="equipo-visita">RSA</span>
+                    <span class="dot dot-visita"></span>
                 </div>
             </div>
 
             <div class="odds-section">
                 <h4 class="odds-title">OPCIONES DE APUESTA</h4>
                 <div class="odd-row">
-                    <span id="label-gana-local">GANA MÉXICO</span>
+                    <span id="label-gana-local">GANA MEX</span>
                     <span class="odd-value" id="cuota-local">-</span>
                 </div>
                 <div class="odd-row">
@@ -111,7 +91,7 @@
                     <span class="odd-value" id="cuota-empate">-</span>
                 </div>
                 <div class="odd-row">
-                    <span id="label-gana-visita">GANA SUDÁFRICA</span>
+                    <span id="label-gana-visita">GANA RSA</span>
                     <span class="odd-value" id="cuota-visita">-</span>
                 </div>
             </div>
@@ -127,10 +107,10 @@
                 const response = await fetch(url);
                 if (response.status === 204) return null;
                 const data = await response.json();
-                if (!response.ok) throw new Error(`Status: ${response.status}`);
+                if (!response.ok) return null; 
                 return data;
             } catch (error) {
-                return null;
+                return null; 
             }
         }
 
@@ -150,52 +130,34 @@
 
         function procesarArrayEventos(arrayEventos) {
             if (!Array.isArray(arrayEventos) || arrayEventos.length === 0) {
-                return { cuotaL: "-", cuotaE: "-", cuotaV: "-", textoEmpate: "EMPATE" };
+                return { cuotaL: "-", cuotaE: "-", cuotaV: "-" };
             }
             const juegos = [];
             const resultados = [];
             for (let item of arrayEventos) {
                 if (!item.Value) continue;
                 const value = item.Value;
-                if (value.Type === "Game") {
-                    juegos.push(value);
-                } else if (value.Type === "Result") {
-                    resultados.push(value);
-                }
+                if (value.Type === "Game") juegos.push(value);
+                else if (value.Type === "Result") resultados.push(value);
             }
             
-            let mercadoPrincipal = juegos.find(j => j.GameType === 97) ||
-                                  juegos.find(j => j.GameType === 1) ||
-                                  juegos.find(j => j.GameType === 159) ||
-                                  juegos[0];
-                                  
-            if (!mercadoPrincipal) {
-                return { cuotaL: "-", cuotaE: "-", cuotaV: "-", textoEmpate: "EMPATE" };
-            }
+            let mercadoPrincipal = juegos.find(j => j.GameType === 97) || juegos.find(j => j.GameType === 1) || juegos[0];
+            if (!mercadoPrincipal) return { cuotaL: "-", cuotaE: "-", cuotaV: "-" };
             
             const resultadosMercado = resultados.filter(r => r.ParentNodeId === mercadoPrincipal.NodeId);
-            if (resultadosMercado.length === 0) {
-                return { cuotaL: "-", cuotaE: "-", cuotaV: "-", textoEmpate: "EMPATE" };
-            }
+            if (resultadosMercado.length === 0) return { cuotaL: "-", cuotaE: "-", cuotaV: "-" };
             
             let cuotaL = "-", cuotaE = "-", cuotaV = "-";
-            let textoEmpate = "EMPATE";
-            
             if (resultadosMercado.length >= 3) {
                 cuotaL = resultadosMercado[0].Odd || resultadosMercado[0].Odds || resultadosMercado[0].Price || "-";
                 cuotaE = resultadosMercado[1].Odd || resultadosMercado[1].Odds || resultadosMercado[1].Price || "-";
                 cuotaV = resultadosMercado[2].Odd || resultadosMercado[2].Odds || resultadosMercado[2].Price || "-";
-            } else if (resultadosMercado.length === 2) {
-                cuotaL = resultadosMercado[0].Odd || resultadosMercado[0].Odds || resultadosMercado[0].Price || "-";
-                cuotaV = resultadosMercado[1].Odd || resultadosMercado[1].Odds || resultadosMercado[1].Price || "-";
-                textoEmpate = "N/A";
-                cuotaE = "-";
             }
             
             if (typeof cuotaL === 'number') cuotaL = cuotaL.toFixed(2);
             if (typeof cuotaE === 'number') cuotaE = cuotaE.toFixed(2);
             if (typeof cuotaV === 'number') cuotaV = cuotaV.toFixed(2);
-            return { cuotaL, cuotaE, cuotaV, textoEmpate };
+            return { cuotaL, cuotaE, cuotaV };
         }
 
         async function actualizarDatosSolos() {
@@ -204,75 +166,53 @@
 
             try {
                 const deportes = await fetchCodere('/sports');
-                if (!deportes || !Array.isArray(deportes)) throw new Error("Sin datos");
+                if (!deportes || !Array.isArray(deportes)) throw new Error();
 
-                const deportesTop = ["Fútbol", "Soccer"];
-                const deporteFutbol = deportes.find(d => deportesTop.includes(d.Name));
-                if (!deporteFutbol) throw new Error("Deporte no encontrado");
+                const deporteFutbol = deportes.find(d => d.Name === "Fútbol" || d.Name === "Soccer");
+                if (!deporteFutbol) throw new Error();
 
                 const paisesResponse = await fetchCodere(`/sports/${deporteFutbol.NodeId}/leagues`);
-                if (!paisesResponse) throw new Error("Sin ligas");
+                if (!paisesResponse) throw new Error();
                 
                 const ligasReales = extraerLigasDePaises(paisesResponse);
-                if (ligasReales.length === 0) throw new Error("Ligas vacías");
                 
-                // Filtramos por palabras clave para no saturar las llamadas a la API
-                const palabrasClave = ["AMISTOSOS", "INTERNACIONAL", "MUNDIAL", "COPA"];
-                const ligasARevisar = ligasReales.filter(liga => 
-                    palabrasClave.some(k => (liga.Name || '').toUpperCase().includes(k))
-                ).slice(0, 10);
-
                 let eventoMexico = null;
 
-                for (let liga of ligasARevisar) {
+                for (let liga of ligasReales.slice(0, 15)) {
                     if (!liga.NodeId) continue;
-                    
-                    // Buscamos en 'events' (partidos futuros)
-                    const eventos = await fetchCodere(`/leagues/${liga.NodeId}/events`);
+                    const eventos = await fetchCodere(`/leagues/${liga.NodeId}/liveEvents`);
                     
                     if (eventos && Array.isArray(eventos)) {
-                        eventoMexico = eventos.find(ev => 
-                            ev.Name && (ev.Name.toUpperCase().includes("MEX") || ev.Name.toUpperCase().includes("MÉX"))
-                        );
+                        // Mantenemos la búsqueda por "MEX" en el backend de Codere
+                        eventoMexico = eventos.find(ev => ev.Name && (ev.Name.toUpperCase().includes("MEX") || ev.Name.toUpperCase().includes("MÉX")));
                         if (eventoMexico) break;
                     }
                 }
 
                 if (!eventoMexico) {
                     escaneoEnProgreso = false;
-                    return; // Falla silenciosa y deja los valores de maqueta
+                    return; 
                 }
 
-                const equipos = eventoMexico.Name.split(" - ");
-                const nombreLocal = equipos[0] ? equipos[0].substring(0, 15).trim() : "MÉXICO";
-                const nombreVisita = equipos[1] ? equipos[1].substring(0, 15).trim() : "SUDÁFRICA";
-
-                document.getElementById('equipo-local-1').innerText = nombreLocal.toUpperCase();
-                document.getElementById('equipo-visita-1').innerText = nombreVisita.toUpperCase();
-                
-                document.getElementById('marcador-local-1').innerText = eventoMexico.HomeScore != null ? eventoMexico.HomeScore : "0";
-                document.getElementById('marcador-visita-1').innerText = eventoMexico.AwayScore != null ? eventoMexico.AwayScore : "0";
+                document.getElementById('marcador-local').innerText = eventoMexico.HomeScore != null ? eventoMexico.HomeScore : "0";
+                document.getElementById('marcador-visita').innerText = eventoMexico.AwayScore != null ? eventoMexico.AwayScore : "0";
 
                 const arrayEventos = await fetchCodere(`/events/${eventoMexico.NodeId}`);
                 const cuotas = procesarArrayEventos(arrayEventos);
-                
-                document.getElementById('label-gana-local').innerText = `GANA ${nombreLocal.toUpperCase()}`;
-                document.getElementById('label-empate').innerText = cuotas.textoEmpate;
-                document.getElementById('label-gana-visita').innerText = `GANA ${nombreVisita.toUpperCase()}`;
                 
                 if (cuotas.cuotaL !== "-") document.getElementById('cuota-local').innerText = cuotas.cuotaL;
                 if (cuotas.cuotaE !== "-") document.getElementById('cuota-empate').innerText = cuotas.cuotaE;
                 if (cuotas.cuotaV !== "-") document.getElementById('cuota-visita').innerText = cuotas.cuotaV;
 
             } catch (error) {
-                // Silencioso para evitar problemas en Broadsign
+                // Falla silenciosa
             } finally {
                 escaneoEnProgreso = false;
             }
         }
 
         actualizarDatosSolos();
-        setInterval(actualizarDatosSolos, 30000);
+        setInterval(actualizarDatosSolos, 60000);
     </script>
 </body>
 </html>
