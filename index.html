@@ -11,29 +11,101 @@
         .pantalla-display { position: relative; width: 325px; height: 960px; background-color: #000; overflow: hidden; box-shadow: 0px 0px 20px rgba(0,0,0,0.5); }
         .fondo-img { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1; }
 
-        .data-overlay { position: absolute; z-index: 2; top: 56.5%; left: 50%; transform: translateX(-50%); width: 84%; background-color: rgba(15, 25, 30, 0.95); border-radius: 10px; padding: 12px; color: #FFF; }
+        /* Contenedor principal estilo tarjeta (Más pequeño y compacto) */
+        .data-overlay { 
+            position: absolute; 
+            z-index: 2; 
+            top: 56.5%; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            width: 72%; /* Reducido de 85% a 72% */
+            background-color: #1a2024; 
+            border-radius: 6px; 
+            padding: 12px 16px; /* Padding más ajustado */
+            color: #FFF; 
+        }
 
-        .league-title { text-align: center; font-size: 10px; font-weight: bold; margin-bottom: 10px; letter-spacing: 0.5px; text-transform: uppercase; color: #00E5FF; }
-
-        .match-info { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 8px; margin-bottom: 8px; }
-        .team { display: flex; align-items: center; font-size: 10px; font-weight: bold; text-transform: uppercase; width: 38%; }
-        .team.right { justify-content: flex-end; text-align: right; }
-        .dot { width: 8px; height: 8px; border-radius: 50%; margin: 0 4px; flex-shrink: 0; }
-        .dot-local { background-color: #FAFF00; }
-        .dot-visita { background-color: #FF0000; }
-        .score-board { font-size: 16px; font-weight: bold; display: flex; justify-content: center; width: 24%; color: #00E5FF; }
-        .score-board .separator { margin: 0 4px; color: #FFF; }
-
-        .odds-section { display: flex; flex-direction: column; }
-        .odds-title { text-align: center; font-size: 10px; margin-bottom: 6px; color: #ccc; letter-spacing: 0.5px; }
-        .odd-row { display: flex; justify-content: space-between; border-bottom: 1px solid #222; padding: 6px 0; font-size: 10px; font-weight: bold; }
-        .odd-row:last-child { border-bottom: none; padding-bottom: 0; }
-        .odd-value { color: #FFF; font-size: 11px; }
-        .loading { text-align: center; color: #FAFF00; font-size: 11px; margin-bottom: 8px; position: absolute; top: -20px; left: 50%; transform: translateX(-50%); width: 100%; }
+        /* Sección del Marcador */
+        .match-info { 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            gap: 12px; 
+            border-bottom: 2px solid #3d4a22; 
+            padding-bottom: 10px; 
+            margin-bottom: 10px; 
+        }
         
-        /* Animación para indicar actualización en vivo */
-        .live-indicator { display: inline-block; width: 6px; height: 6px; background-color: #FF0000; border-radius: 50%; margin-left: 5px; animation: blink 1s infinite; }
-        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
+        .team-container { 
+            display: flex; 
+            align-items: center; 
+            gap: 6px; 
+        }
+        
+        .team-name { 
+            font-size: 14px; /* Reducido de 18px */
+            font-weight: 900; 
+            letter-spacing: 0.5px;
+        }
+
+        /* Puntos de colores */
+        .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .dot-local { background-color: #00C800; } 
+        .dot-visita { background-color: #FFD700; } 
+
+        /* Números del marcador */
+        .score-board { 
+            font-size: 24px; /* Reducido de 32px */
+            font-weight: 900; 
+            display: flex; 
+            align-items: center;
+        }
+        .score-board .separator { margin: 0 4px; }
+
+        /* Sección de Momios */
+        .odds-title { 
+            text-align: center; 
+            font-size: 10px; /* Reducido de 13px */
+            font-weight: 800;
+            margin-bottom: 10px; 
+            letter-spacing: 0.5px; 
+        }
+
+        .odd-row { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            border-bottom: 2px solid #3d4a22; 
+            padding: 8px 0; /* Espaciado vertical más compacto */
+        }
+        
+        .odd-row:last-child { 
+            border-bottom: none; 
+            padding-bottom: 0; 
+        }
+
+        .odd-label { 
+            font-size: 12px; /* Reducido de 15px */
+            font-weight: bold; 
+        }
+        
+        .odd-value { 
+            font-size: 13px; /* Reducido de 16px */
+            font-weight: 900; 
+        }
+
+        /* Estado de carga */
+        .loading { 
+            text-align: center; 
+            color: #FFD700; 
+            font-size: 10px; 
+            position: absolute; 
+            top: -22px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            width: 100%; 
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -42,38 +114,37 @@
         <img src="https://jxwdncxtnhmrufvdxuti.supabase.co/storage/v1/object/public/banners-publicos/WhatsApp%20Image%202026-06-05%20at%2012.17.23%20PM.jpeg" alt="Fondo Promocional" class="fondo-img">
 
         <div class="data-overlay" id="widget-datos">
-            <div id="estado-carga" class="loading">Sincronizando partido...</div>
-
-            <h3 class="league-title" id="titulo-liga">MUNDIAL 2026 - INAUGURACIÓN</h3>
+            <div id="estado-carga" class="loading">Sincronizando...</div>
 
             <div class="match-info">
-                <div class="team">
+                <div class="team-container">
                     <span class="dot dot-local"></span>
-                    <span id="equipo-local">MÉXICO</span>
+                    <span class="team-name">MEX</span>
                 </div>
                 <div class="score-board">
                     <span id="marcador-local">0</span>
                     <span class="separator">-</span>
                     <span id="marcador-visita">0</span>
                 </div>
-                <div class="team right">
-                    <span id="equipo-visita">SUDÁFRICA</span>
+                <div class="team-container">
+                    <span class="team-name">RSA</span>
                     <span class="dot dot-visita"></span>
                 </div>
             </div>
 
+            <h4 class="odds-title">OPCIONES DE APUESTA</h4>
+            
             <div class="odds-section">
-                <h4 class="odds-title">MERCADO EN VIVO<span class="live-indicator"></span></h4>
                 <div class="odd-row">
-                    <span id="label-gana-local">GANA MÉXICO</span>
+                    <span class="odd-label">GANA MEX</span>
                     <span class="odd-value" id="cuota-local">--</span>
                 </div>
                 <div class="odd-row">
-                    <span id="label-empate">EMPATE</span>
+                    <span class="odd-label">EMPATE</span>
                     <span class="odd-value" id="cuota-empate">--</span>
                 </div>
                 <div class="odd-row">
-                    <span id="label-gana-visita">GANA SUDÁFRICA</span>
+                    <span class="odd-label">GANA RSA</span>
                     <span class="odd-value" id="cuota-visita">--</span>
                 </div>
             </div>
@@ -81,7 +152,6 @@
     </div>
 
     <script>
-        // EL ID EXACTO DEL PARTIDO DE MÉXICO VS SUDÁFRICA
         const MEXICO_EVENT_ID = "13177428310"; 
         let actualizacionEnProgreso = false;
 
@@ -113,11 +183,9 @@
             const juegos = [];
             const resultados = [];
 
-            // Clasificar los nodos devueltos por Codere
             for (let item of arrayEventos) {
                 if (!item.Value) continue;
                 if (item.Value.Type === "Event" && item.Value.NodeId === MEXICO_EVENT_ID) {
-                    // Si el partido ya empezó, traemos el marcador, sino se queda en 0
                     dataPartido.marcadorLocal = item.Value.HomeScore != null ? item.Value.HomeScore : 0;
                     dataPartido.marcadorVisita = item.Value.AwayScore != null ? item.Value.AwayScore : 0;
                 } else if (item.Value.Type === "Game") {
@@ -127,20 +195,15 @@
                 }
             }
 
-            // Buscar el mercado de "Resultado Final" (Gana Local / Empate / Gana Visita)
-            // Normalmente Codere usa GameType 1, 97 o 159 para el 1X2.
             let mercadoPrincipal = juegos.find(j => j.GameType === 1 || j.GameType === 97 || j.GameType === 159);
             
-            // Si por alguna razón cambió el GameType, buscamos por nombre aproximado
             if (!mercadoPrincipal) {
                 mercadoPrincipal = juegos.find(j => j.NodeName && j.NodeName.toUpperCase().includes("RESULTADO"));
             }
 
             if (mercadoPrincipal) {
-                // Sacar las 3 cuotas atadas a este mercado
                 const resultadosMercado = resultados.filter(r => r.ParentNodeId === mercadoPrincipal.NodeId);
                 
-                // Asegurar que vengan ordenadas (Local, Empate, Visita) usando ParticipantOrder
                 resultadosMercado.sort((a, b) => {
                     let orderA = 99, orderB = 99;
                     try {
@@ -172,9 +235,7 @@
 
             try {
                 estadoCarga.style.display = 'block';
-                estadoCarga.innerText = "Actualizando momios...";
 
-                // Consultamos directamente el ID del evento de México
                 const arrayEventos = await fetchCodere(`/events/${MEXICO_EVENT_ID}`);
                 const datos = procesarDataDelPartido(arrayEventos);
 
@@ -190,18 +251,14 @@
                 estadoCarga.style.display = 'none';
 
             } catch (error) {
-                console.error("Error al actualizar datos de México: ", error);
-                estadoCarga.innerText = "Reintentando conexión...";
+                console.error("Error al actualizar datos: ", error);
             } finally {
                 actualizacionEnProgreso = false;
             }
         }
 
-        // Carga inicial
         actualizarDatosMexico();
-        // Configurar el ciclo de actualización cada 30 segundos
         setInterval(actualizarDatosMexico, 30000);
-
     </script>
 </body>
 </html>
