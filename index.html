@@ -14,7 +14,7 @@
         .data-overlay { 
             position: absolute; 
             z-index: 2; 
-            top: 65%; 
+            top: 58%; 
             left: 50%; 
             transform: translateX(-50%); 
             width: 88%; 
@@ -124,22 +124,20 @@
             return num > 0 ? `+${num}` : num.toString(); 
         };
 
-        const findNode = (obj, key) => {
-            if (!obj || typeof obj !== 'object') return null;
-            if (key in obj) return obj[key];
-            for (let k in obj) {
-                let res = findNode(obj[k], key);
-                if (res) return res;
+        // --- NUEVO MOTOR DE BÚSQUEDA "APLANADORA" ---
+        // Extrae TODOS los objetos del árbol JSON, sin importar qué tan profundos estén.
+        const flattenJSON = (obj, results = []) => {
+            if (!obj || typeof obj !== 'object') return results;
+            if (!Array.isArray(obj)) results.push(obj);
+            for (let key in obj) {
+                if (obj[key] && typeof obj[key] === 'object') {
+                    flattenJSON(obj[key], results);
+                }
             }
-            return null;
+            return results;
         };
 
-        const getArray = (data, keyName) => {
-            let items = findNode(data, keyName);
-            if (!items) return [];
-            return Array.isArray(items) ? items : [items];
-        };
-
+        // Busca una propiedad soportando los prefijos '@' de la conversión XML de Codere
         const getProp = (obj, propNames) => {
             if (!obj) return null;
             for (let prop of propNames) {
@@ -154,42 +152,42 @@
             escaneoEnProgreso = true;
 
             try {
-                // 1. Obtener Deporte (Fútbol)
+                // 1. Obtener Deporte (Filtra todos los nodos que tengan un sport_code)
                 const sportsData = await fetchCodere('/getSportsMexico');
-                const sports = getArray(sportsData, 'Sport');
-                if (sports.length === 0) throw new Error("API offline o vacía");
+                const sports = flattenJSON(sportsData).filter(o => getProp(o, ['sport_code', 'Code']));
+                if (sports.length === 0) throw new Error("API offline o sin deportes");
                 
                 const futbol = sports.find(s => getProp(s, ['name', 'Name']) === "Fútbol" || getProp(s, ['sport_code', 'Code']) === "SOCCER") || sports[0];
-                const sportCode = getProp(futbol, ['sport_code', 'Code', 'Id']);
+                const sportCode = getProp(futbol, ['sport_code', 'Code']);
                 if (!sportCode) throw new Error("Estructura Sport inválida");
 
                 // 2. Obtener Clase (Mundial 2026)
                 const classesData = await fetchCodere(`/getClassesForSport/${sportCode}`);
-                const classes = getArray(classesData, 'Class');
+                const classes = flattenJSON(classesData).filter(o => getProp(o, ['sb_class_id']));
                 if (classes.length === 0) throw new Error("Clases no disponibles");
                 
                 const claseMundial = classes.find(c => {
                     const name = getProp(c, ['name', 'Name']);
                     return name && name.includes("Mundial 2026");
                 }) || classes[0];
-                const classId = getProp(claseMundial, ['sb_class_id', 'Id']);
+                const classId = getProp(claseMundial, ['sb_class_id']);
                 if (!classId) throw new Error("ID de clase no encontrado");
 
                 // 3. Obtener Tipo (Partidos)
                 const typesData = await fetchCodere(`/getTypesForClass/${classId}`);
-                const types = getArray(typesData, 'Type');
+                const types = flattenJSON(typesData).filter(o => getProp(o, ['sb_type_id']));
                 if (types.length === 0) throw new Error("Tipos no disponibles");
                 
                 const tipoPartidos = types.find(t => {
                     const name = getProp(t, ['name', 'Name']);
                     return name && name.includes("Partidos");
                 }) || types[0];
-                const typeId = getProp(tipoPartidos, ['sb_type_id', 'Id']);
+                const typeId = getProp(tipoPartidos, ['sb_type_id']);
                 if (!typeId) throw new Error("ID de tipo no encontrado");
 
                 // 4. Obtener Evento (México v Sudáfrica)
                 const eventsData = await fetchCodere(`/getEventsForType/${typeId}`);
-                const events = getArray(eventsData, 'Event');
+                const events = flattenJSON(eventsData).filter(o => getProp(o, ['ev_id']));
                 if (events.length === 0) throw new Error("Eventos vacíos");
                 
                 const eventoMexico = events.find(ev => {
@@ -197,29 +195,28 @@
                     return name && (name.toUpperCase().includes("MÉXICO") || name.toUpperCase().includes("MEX"));
                 });
                 
-                // Si el evento no está listo en la API, se detiene aquí y preserva el Fallback de la pantalla
                 if (!eventoMexico) {
                     console.log("Evento MEX vs RSA no abierto en API. Usando datos de respaldo.");
                     escaneoEnProgreso = false;
-                    return; 
+                    return; // Mantiene el Fallback de la pantalla activo
                 }
 
-                const evId = getProp(eventoMexico, ['ev_id', 'Id']);
+                const evId = getProp(eventoMexico, ['ev_id']);
                 if (!evId) throw new Error("ID de evento no encontrado");
 
                 // 5. Obtener Mercados del Evento
                 const marketsData = await fetchCodere(`/getMarketsByEvent/${evId}`);
-                const markets = getArray(marketsData, 'Market');
-                if (markets.length === 0) throw new Error("Mercados vacíos");
+                const allMarketNodes = flattenJSON(marketsData);
                 
-                const mercado1x2 = markets.find(m => {
+                const mercado1x2 = allMarketNodes.find(m => {
                     const name = getProp(m, ['name', 'Name']);
                     return name && (name.includes("1X2") || name.includes("Ganador") || name.includes("Match Betting"));
-                }) || markets[0];
+                });
+                if (!mercado1x2) throw new Error("Mercados vacíos");
                 
-                const resultados = getArray(mercado1x2, 'Selection') || getArray(mercado1x2, 'Result') || [];
+                // 6. Inyectar datos en tiempo real (busca nodos que contengan una cuota)
+                const resultados = flattenJSON(mercado1x2).filter(o => getProp(o, ['us', 'AmericanOdds', 'odd', 'Odd', 'price', 'dec']));
 
-                // 6. Inyectar datos en tiempo real detectados de la API
                 if (resultados.length >= 3) {
                     const getOdd = (res) => getProp(res, ['us', 'AmericanOdds', 'odd', 'Odd', 'price', 'dec']);
 
@@ -232,7 +229,7 @@
                     if(cV) document.getElementById('cuota-visita').innerText = cV;
                 }
 
-                // Conservar marcadores vivos si la API reporta goles pre-partido (inicialmente 0)
+                // Conservar marcadores vivos
                 const hScore = getProp(eventoMexico, ['HomeScore', 'home_score']);
                 const aScore = getProp(eventoMexico, ['AwayScore', 'away_score']);
                 if (hScore != null) document.getElementById('marcador-local').innerText = hScore;
@@ -245,7 +242,6 @@
             }
         }
 
-        // Ejecución inmediata y bucle de refresco cada 30 segundos
         actualizarDatosSolos();
         setInterval(actualizarDatosSolos, 30000);
     </script>
