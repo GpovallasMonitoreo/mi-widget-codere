@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tablero Codere - MEX vs RSA En Vivo</title>
+    <title>Tablero Codere en Vivo - Selección Mexicana</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Arial', sans-serif; }
         body { background-color: #111; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
@@ -11,63 +11,45 @@
         .pantalla-display { position: relative; width: 325px; height: 960px; background-color: #000; overflow: hidden; box-shadow: 0px 0px 20px rgba(0,0,0,0.5); }
         .fondo-img { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1; }
 
-        .data-overlay { 
-            position: absolute; 
-            z-index: 2; 
-            top: 65%; 
-            left: 50%; 
-            transform: translateX(-50%); 
-            width: 88%; 
-            background-color: #171f24; 
-            border-radius: 8px; 
-            padding: 15px 20px; 
-            color: #FFF; 
-        }
+        .data-overlay { position: absolute; z-index: 2; top: 56.5%; left: 50%; transform: translateX(-50%); width: 84%; background-color: rgba(15, 25, 30, 0.95); border-radius: 10px; padding: 12px; color: #FFF; }
 
-        .match-info { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            border-bottom: 1px solid #7bc100; 
-            padding-bottom: 12px; 
-            margin-bottom: 15px; 
-        }
-        
-        .team { display: flex; align-items: center; font-size: 18px; font-weight: bold; text-transform: uppercase; width: 40%; }
+        .league-title { text-align: center; font-size: 10px; font-weight: bold; margin-bottom: 10px; letter-spacing: 0.5px; text-transform: uppercase; color: #00E5FF; }
+
+        .match-info { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 8px; margin-bottom: 8px; }
+        .team { display: flex; align-items: center; font-size: 10px; font-weight: bold; text-transform: uppercase; width: 38%; }
         .team.right { justify-content: flex-end; text-align: right; }
-        
-        .dot { width: 12px; height: 12px; border-radius: 50%; margin: 0 8px; flex-shrink: 0; }
-        .dot-local { background-color: #009900; } 
-        .dot-visita { background-color: #FFD700; } 
-        
-        .score-board { font-size: 32px; font-weight: bold; display: flex; justify-content: center; width: 20%; color: #FFF; }
-        .score-board .separator { margin: 0 6px; color: #FFF; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; margin: 0 4px; flex-shrink: 0; }
+        .dot-local { background-color: #FAFF00; }
+        .dot-visita { background-color: #FF0000; }
+        .score-board { font-size: 16px; font-weight: bold; display: flex; justify-content: center; width: 24%; color: #00E5FF; }
+        .score-board .separator { margin: 0 4px; color: #FFF; }
 
         .odds-section { display: flex; flex-direction: column; }
-        .odds-title { text-align: center; font-size: 14px; margin-bottom: 12px; color: #FFF; font-weight: bold; text-transform: uppercase; }
-        
-        .odd-row { 
-            display: flex; 
-            justify-content: space-between; 
-            border-bottom: 1px solid #7bc100; 
-            padding: 8px 0; 
-            font-size: 16px; 
-            font-weight: bold; 
-        }
+        .odds-title { text-align: center; font-size: 10px; margin-bottom: 6px; color: #ccc; letter-spacing: 0.5px; }
+        .odd-row { display: flex; justify-content: space-between; border-bottom: 1px solid #222; padding: 6px 0; font-size: 10px; font-weight: bold; }
         .odd-row:last-child { border-bottom: none; padding-bottom: 0; }
-        .odd-value { color: #FFF; font-size: 20px; }
+        .odd-value { color: #FFF; font-size: 11px; }
+        .loading { text-align: center; color: #FAFF00; font-size: 11px; margin-bottom: 8px; position: absolute; top: -20px; left: 50%; transform: translateX(-50%); width: 100%; }
+        
+        /* Animación para indicar actualización en vivo */
+        .live-indicator { display: inline-block; width: 6px; height: 6px; background-color: #FF0000; border-radius: 50%; margin-left: 5px; animation: blink 1s infinite; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
 
     <div class="pantalla-display">
-        <img src="https://jxwdncxtnhmrufvdxuti.supabase.co/storage/v1/object/public/banners-publicos/WhatsApp%20Image%202026-06-09%20at%208.40.30%20PM.jpeg" alt="Fondo Promocional" class="fondo-img">
+        <img src="https://jxwdncxtnhmrufvdxuti.supabase.co/storage/v1/object/public/banners-publicos/WhatsApp%20Image%202026-06-05%20at%2012.17.23%20PM.jpeg" alt="Fondo Promocional" class="fondo-img">
 
         <div class="data-overlay" id="widget-datos">
+            <div id="estado-carga" class="loading">Sincronizando partido...</div>
+
+            <h3 class="league-title" id="titulo-liga">MUNDIAL 2026 - INAUGURACIÓN</h3>
+
             <div class="match-info">
                 <div class="team">
                     <span class="dot dot-local"></span>
-                    <span id="equipo-local">MEX</span>
+                    <span id="equipo-local">MÉXICO</span>
                 </div>
                 <div class="score-board">
                     <span id="marcador-local">0</span>
@@ -75,31 +57,33 @@
                     <span id="marcador-visita">0</span>
                 </div>
                 <div class="team right">
-                    <span id="equipo-visita">RSA</span>
+                    <span id="equipo-visita">SUDÁFRICA</span>
                     <span class="dot dot-visita"></span>
                 </div>
             </div>
 
             <div class="odds-section">
-                <h4 class="odds-title">OPCIONES DE APUESTA</h4>
+                <h4 class="odds-title">MERCADO EN VIVO<span class="live-indicator"></span></h4>
                 <div class="odd-row">
-                    <span id="label-gana-local">GANA MEX</span>
-                    <span class="odd-value" id="cuota-local">-233</span>
+                    <span id="label-gana-local">GANA MÉXICO</span>
+                    <span class="odd-value" id="cuota-local">--</span>
                 </div>
                 <div class="odd-row">
                     <span id="label-empate">EMPATE</span>
-                    <span class="odd-value" id="cuota-empate">+330</span>
+                    <span class="odd-value" id="cuota-empate">--</span>
                 </div>
                 <div class="odd-row">
-                    <span id="label-gana-visita">GANA RSA</span>
-                    <span class="odd-value" id="cuota-visita">+900</span>
+                    <span id="label-gana-visita">GANA SUDÁFRICA</span>
+                    <span class="odd-value" id="cuota-visita">--</span>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        let escaneoEnProgreso = false;
+        // EL ID EXACTO DEL PARTIDO DE MÉXICO VS SUDÁFRICA
+        const MEXICO_EVENT_ID = "13177428310"; 
+        let actualizacionEnProgreso = false;
 
         async function fetchCodere(endpoint) {
             try {
@@ -107,143 +91,117 @@
                 const response = await fetch(url);
                 if (response.status === 204) return null;
                 const data = await response.json();
-                if (!response.ok) return null; 
+                if (!response.ok) throw new Error(`Status: ${response.status}`);
                 return data;
             } catch (error) {
-                return null; 
+                console.error("Error en fetchCodere:", error);
+                return null;
             }
         }
 
-        const formatMomio = (val) => {
-            if (val == null || val === "" || val === "-") return null;
-            const strVal = val.toString();
-            if (strVal.includes('.')) return strVal; 
+        function procesarDataDelPartido(arrayEventos) {
+            if (!Array.isArray(arrayEventos) || arrayEventos.length === 0) return null;
             
-            const num = Number(val);
-            if (isNaN(num)) return val; 
-            return num > 0 ? `+${num}` : num.toString(); 
-        };
+            let dataPartido = {
+                marcadorLocal: 0,
+                marcadorVisita: 0,
+                cuotaL: "N/D",
+                cuotaE: "N/D",
+                cuotaV: "N/D"
+            };
 
-        // --- NUEVO MOTOR DE BÚSQUEDA "APLANADORA" ---
-        // Extrae TODOS los objetos del árbol JSON, sin importar qué tan profundos estén.
-        const flattenJSON = (obj, results = []) => {
-            if (!obj || typeof obj !== 'object') return results;
-            if (!Array.isArray(obj)) results.push(obj);
-            for (let key in obj) {
-                if (obj[key] && typeof obj[key] === 'object') {
-                    flattenJSON(obj[key], results);
+            const juegos = [];
+            const resultados = [];
+
+            // Clasificar los nodos devueltos por Codere
+            for (let item of arrayEventos) {
+                if (!item.Value) continue;
+                if (item.Value.Type === "Event" && item.Value.NodeId === MEXICO_EVENT_ID) {
+                    // Si el partido ya empezó, traemos el marcador, sino se queda en 0
+                    dataPartido.marcadorLocal = item.Value.HomeScore != null ? item.Value.HomeScore : 0;
+                    dataPartido.marcadorVisita = item.Value.AwayScore != null ? item.Value.AwayScore : 0;
+                } else if (item.Value.Type === "Game") {
+                    juegos.push(item.Value);
+                } else if (item.Value.Type === "Result") {
+                    resultados.push(item.Value);
                 }
             }
-            return results;
-        };
 
-        // Busca una propiedad soportando los prefijos '@' de la conversión XML de Codere
-        const getProp = (obj, propNames) => {
-            if (!obj) return null;
-            for (let prop of propNames) {
-                if (obj[`@${prop}`] !== undefined) return obj[`@${prop}`];
-                if (obj[prop] !== undefined) return obj[prop];
+            // Buscar el mercado de "Resultado Final" (Gana Local / Empate / Gana Visita)
+            // Normalmente Codere usa GameType 1, 97 o 159 para el 1X2.
+            let mercadoPrincipal = juegos.find(j => j.GameType === 1 || j.GameType === 97 || j.GameType === 159);
+            
+            // Si por alguna razón cambió el GameType, buscamos por nombre aproximado
+            if (!mercadoPrincipal) {
+                mercadoPrincipal = juegos.find(j => j.NodeName && j.NodeName.toUpperCase().includes("RESULTADO"));
             }
-            return null;
-        };
 
-        async function actualizarDatosSolos() {
-            if (escaneoEnProgreso) return;
-            escaneoEnProgreso = true;
+            if (mercadoPrincipal) {
+                // Sacar las 3 cuotas atadas a este mercado
+                const resultadosMercado = resultados.filter(r => r.ParentNodeId === mercadoPrincipal.NodeId);
+                
+                // Asegurar que vengan ordenadas (Local, Empate, Visita) usando ParticipantOrder
+                resultadosMercado.sort((a, b) => {
+                    let orderA = 99, orderB = 99;
+                    try {
+                        orderA = parseInt(a.AdditionalValues.LocalizedValues.find(v => v.Key === "ParticipantOrder").Value);
+                        orderB = parseInt(b.AdditionalValues.LocalizedValues.find(v => v.Key === "ParticipantOrder").Value);
+                    } catch(e){}
+                    return orderA - orderB;
+                });
+
+                if (resultadosMercado.length >= 3) {
+                    let cL = resultadosMercado[0].Odd || resultadosMercado[0].Price || "N/D";
+                    let cE = resultadosMercado[1].Odd || resultadosMercado[1].Price || "N/D";
+                    let cV = resultadosMercado[2].Odd || resultadosMercado[2].Price || "N/D";
+
+                    dataPartido.cuotaL = typeof cL === 'number' ? cL.toFixed(2) : cL;
+                    dataPartido.cuotaE = typeof cE === 'number' ? cE.toFixed(2) : cE;
+                    dataPartido.cuotaV = typeof cV === 'number' ? cV.toFixed(2) : cV;
+                }
+            }
+
+            return dataPartido;
+        }
+
+        async function actualizarDatosMexico() {
+            if (actualizacionEnProgreso) return;
+            actualizacionEnProgreso = true;
+            
+            const estadoCarga = document.getElementById('estado-carga');
 
             try {
-                // 1. Obtener Deporte (Filtra todos los nodos que tengan un sport_code)
-                const sportsData = await fetchCodere('/getSportsMexico');
-                const sports = flattenJSON(sportsData).filter(o => getProp(o, ['sport_code', 'Code']));
-                if (sports.length === 0) throw new Error("API offline o sin deportes");
-                
-                const futbol = sports.find(s => getProp(s, ['name', 'Name']) === "Fútbol" || getProp(s, ['sport_code', 'Code']) === "SOCCER") || sports[0];
-                const sportCode = getProp(futbol, ['sport_code', 'Code']);
-                if (!sportCode) throw new Error("Estructura Sport inválida");
+                estadoCarga.style.display = 'block';
+                estadoCarga.innerText = "Actualizando momios...";
 
-                // 2. Obtener Clase (Mundial 2026)
-                const classesData = await fetchCodere(`/getClassesForSport/${sportCode}`);
-                const classes = flattenJSON(classesData).filter(o => getProp(o, ['sb_class_id']));
-                if (classes.length === 0) throw new Error("Clases no disponibles");
-                
-                const claseMundial = classes.find(c => {
-                    const name = getProp(c, ['name', 'Name']);
-                    return name && name.includes("Mundial 2026");
-                }) || classes[0];
-                const classId = getProp(claseMundial, ['sb_class_id']);
-                if (!classId) throw new Error("ID de clase no encontrado");
+                // Consultamos directamente el ID del evento de México
+                const arrayEventos = await fetchCodere(`/events/${MEXICO_EVENT_ID}`);
+                const datos = procesarDataDelPartido(arrayEventos);
 
-                // 3. Obtener Tipo (Partidos)
-                const typesData = await fetchCodere(`/getTypesForClass/${classId}`);
-                const types = flattenJSON(typesData).filter(o => getProp(o, ['sb_type_id']));
-                if (types.length === 0) throw new Error("Tipos no disponibles");
-                
-                const tipoPartidos = types.find(t => {
-                    const name = getProp(t, ['name', 'Name']);
-                    return name && name.includes("Partidos");
-                }) || types[0];
-                const typeId = getProp(tipoPartidos, ['sb_type_id']);
-                if (!typeId) throw new Error("ID de tipo no encontrado");
-
-                // 4. Obtener Evento (México v Sudáfrica)
-                const eventsData = await fetchCodere(`/getEventsForType/${typeId}`);
-                const events = flattenJSON(eventsData).filter(o => getProp(o, ['ev_id']));
-                if (events.length === 0) throw new Error("Eventos vacíos");
-                
-                const eventoMexico = events.find(ev => {
-                    const name = getProp(ev, ['name', 'Name', 'event_name']);
-                    return name && (name.toUpperCase().includes("MÉXICO") || name.toUpperCase().includes("MEX"));
-                });
-                
-                if (!eventoMexico) {
-                    console.log("Evento MEX vs RSA no abierto en API. Usando datos de respaldo.");
-                    escaneoEnProgreso = false;
-                    return; // Mantiene el Fallback de la pantalla activo
+                if (datos) {
+                    document.getElementById('marcador-local').innerText = datos.marcadorLocal;
+                    document.getElementById('marcador-visita').innerText = datos.marcadorVisita;
+                    
+                    document.getElementById('cuota-local').innerText = datos.cuotaL;
+                    document.getElementById('cuota-empate').innerText = datos.cuotaE;
+                    document.getElementById('cuota-visita').innerText = datos.cuotaV;
                 }
 
-                const evId = getProp(eventoMexico, ['ev_id']);
-                if (!evId) throw new Error("ID de evento no encontrado");
-
-                // 5. Obtener Mercados del Evento
-                const marketsData = await fetchCodere(`/getMarketsByEvent/${evId}`);
-                const allMarketNodes = flattenJSON(marketsData);
-                
-                const mercado1x2 = allMarketNodes.find(m => {
-                    const name = getProp(m, ['name', 'Name']);
-                    return name && (name.includes("1X2") || name.includes("Ganador") || name.includes("Match Betting"));
-                });
-                if (!mercado1x2) throw new Error("Mercados vacíos");
-                
-                // 6. Inyectar datos en tiempo real (busca nodos que contengan una cuota)
-                const resultados = flattenJSON(mercado1x2).filter(o => getProp(o, ['us', 'AmericanOdds', 'odd', 'Odd', 'price', 'dec']));
-
-                if (resultados.length >= 3) {
-                    const getOdd = (res) => getProp(res, ['us', 'AmericanOdds', 'odd', 'Odd', 'price', 'dec']);
-
-                    const cL = formatMomio(getOdd(resultados[0]));
-                    const cE = formatMomio(getOdd(resultados[1]));
-                    const cV = formatMomio(getOdd(resultados[2]));
-
-                    if(cL) document.getElementById('cuota-local').innerText = cL;
-                    if(cE) document.getElementById('cuota-empate').innerText = cE;
-                    if(cV) document.getElementById('cuota-visita').innerText = cV;
-                }
-
-                // Conservar marcadores vivos
-                const hScore = getProp(eventoMexico, ['HomeScore', 'home_score']);
-                const aScore = getProp(eventoMexico, ['AwayScore', 'away_score']);
-                if (hScore != null) document.getElementById('marcador-local').innerText = hScore;
-                if (aScore != null) document.getElementById('marcador-visita').innerText = aScore;
+                estadoCarga.style.display = 'none';
 
             } catch (error) {
-                console.log("Modo de Respaldo Activo:", error.message);
+                console.error("Error al actualizar datos de México: ", error);
+                estadoCarga.innerText = "Reintentando conexión...";
             } finally {
-                escaneoEnProgreso = false;
+                actualizacionEnProgreso = false;
             }
         }
 
-        actualizarDatosSolos();
-        setInterval(actualizarDatosSolos, 30000);
+        // Carga inicial
+        actualizarDatosMexico();
+        // Configurar el ciclo de actualización cada 30 segundos
+        setInterval(actualizarDatosMexico, 30000);
+
     </script>
 </body>
 </html>
