@@ -70,9 +70,9 @@
                     <span id="equipo-local">MEX</span>
                 </div>
                 <div class="score-board">
-                    <span id="marcador-local">-</span>
+                    <span id="marcador-local">0</span>
                     <span class="separator">-</span>
-                    <span id="marcador-visita">-</span>
+                    <span id="marcador-visita">0</span>
                 </div>
                 <div class="team right">
                     <span id="equipo-visita">RSA</span>
@@ -84,15 +84,15 @@
                 <h4 class="odds-title">OPCIONES DE APUESTA</h4>
                 <div class="odd-row">
                     <span id="label-gana-local">GANA MEX</span>
-                    <span class="odd-value" id="cuota-local">-</span>
+                    <span class="odd-value" id="cuota-local">-233</span>
                 </div>
                 <div class="odd-row">
                     <span id="label-empate">EMPATE</span>
-                    <span class="odd-value" id="cuota-empate">-</span>
+                    <span class="odd-value" id="cuota-empate">+330</span>
                 </div>
                 <div class="odd-row">
                     <span id="label-gana-visita">GANA RSA</span>
-                    <span class="odd-value" id="cuota-visita">-</span>
+                    <span class="odd-value" id="cuota-visita">+900</span>
                 </div>
             </div>
         </div>
@@ -114,19 +114,16 @@
             }
         }
 
-        // Formatea el número. Respeta decimales o inyecta el "+" en momios americanos enteros.
         const formatMomio = (val) => {
-            if (val == null || val === "" || val === "-") return "-";
+            if (val == null || val === "" || val === "-") return null;
             const strVal = val.toString();
-            if (strVal.includes('.')) return strVal; // Es decimal (ej. 1.50)
+            if (strVal.includes('.')) return strVal; 
             
             const num = Number(val);
             if (isNaN(num)) return val; 
-            return num > 0 ? `+${num}` : num.toString(); // Es americano (ej. +330, -233)
+            return num > 0 ? `+${num}` : num.toString(); 
         };
 
-        // --- BÚSQUEDA RECURSIVA (LA SOLUCIÓN AL ERROR DE ESTRUCTURA) ---
-        // Escarba en el JSON para encontrar el nodo, sin importar qué tan anidado esté
         const findNode = (obj, key) => {
             if (!obj || typeof obj !== 'object') return null;
             if (key in obj) return obj[key];
@@ -160,58 +157,60 @@
                 // 1. Obtener Deporte (Fútbol)
                 const sportsData = await fetchCodere('/getSportsMexico');
                 const sports = getArray(sportsData, 'Sport');
-                if (sports.length === 0) throw new Error("Sin datos de deportes");
+                if (sports.length === 0) throw new Error("API offline o vacía");
                 
                 const futbol = sports.find(s => getProp(s, ['name', 'Name']) === "Fútbol" || getProp(s, ['sport_code', 'Code']) === "SOCCER") || sports[0];
                 const sportCode = getProp(futbol, ['sport_code', 'Code', 'Id']);
-                if (!sportCode) throw new Error("No se pudo extraer el sport_code");
+                if (!sportCode) throw new Error("Estructura Sport inválida");
 
                 // 2. Obtener Clase (Mundial 2026)
                 const classesData = await fetchCodere(`/getClassesForSport/${sportCode}`);
                 const classes = getArray(classesData, 'Class');
-                if (classes.length === 0) throw new Error("Sin datos de clases");
+                if (classes.length === 0) throw new Error("Clases no disponibles");
                 
                 const claseMundial = classes.find(c => {
                     const name = getProp(c, ['name', 'Name']);
                     return name && name.includes("Mundial 2026");
                 }) || classes[0];
                 const classId = getProp(claseMundial, ['sb_class_id', 'Id']);
-                if (!classId) throw new Error("No se pudo extraer el classId");
+                if (!classId) throw new Error("ID de clase no encontrado");
 
                 // 3. Obtener Tipo (Partidos)
                 const typesData = await fetchCodere(`/getTypesForClass/${classId}`);
                 const types = getArray(typesData, 'Type');
-                if (types.length === 0) throw new Error("Sin datos de tipos");
+                if (types.length === 0) throw new Error("Tipos no disponibles");
                 
                 const tipoPartidos = types.find(t => {
                     const name = getProp(t, ['name', 'Name']);
                     return name && name.includes("Partidos");
                 }) || types[0];
                 const typeId = getProp(tipoPartidos, ['sb_type_id', 'Id']);
-                if (!typeId) throw new Error("No se pudo extraer el typeId");
+                if (!typeId) throw new Error("ID de tipo no encontrado");
 
                 // 4. Obtener Evento (México v Sudáfrica)
                 const eventsData = await fetchCodere(`/getEventsForType/${typeId}`);
                 const events = getArray(eventsData, 'Event');
-                if (events.length === 0) throw new Error("Sin eventos");
+                if (events.length === 0) throw new Error("Eventos vacíos");
                 
                 const eventoMexico = events.find(ev => {
                     const name = getProp(ev, ['name', 'Name', 'event_name']);
                     return name && (name.toUpperCase().includes("MÉXICO") || name.toUpperCase().includes("MEX"));
                 });
                 
+                // Si el evento no está listo en la API, se detiene aquí y preserva el Fallback de la pantalla
                 if (!eventoMexico) {
+                    console.log("Evento MEX vs RSA no abierto en API. Usando datos de respaldo.");
                     escaneoEnProgreso = false;
-                    return; // Si no hay evento expuesto, se quedan los guiones en la pantalla
+                    return; 
                 }
 
                 const evId = getProp(eventoMexico, ['ev_id', 'Id']);
-                if (!evId) throw new Error("No se pudo extraer el evId");
+                if (!evId) throw new Error("ID de evento no encontrado");
 
                 // 5. Obtener Mercados del Evento
                 const marketsData = await fetchCodere(`/getMarketsByEvent/${evId}`);
                 const markets = getArray(marketsData, 'Market');
-                if (markets.length === 0) throw new Error("Sin mercados");
+                if (markets.length === 0) throw new Error("Mercados vacíos");
                 
                 const mercado1x2 = markets.find(m => {
                     const name = getProp(m, ['name', 'Name']);
@@ -220,29 +219,35 @@
                 
                 const resultados = getArray(mercado1x2, 'Selection') || getArray(mercado1x2, 'Result') || [];
 
-                // 6. Inyectar datos en la pantalla
+                // 6. Inyectar datos en tiempo real detectados de la API
                 if (resultados.length >= 3) {
-                    // Busca el momio americano o decimal bajo los distintos nombres que usa Codere/Geneity
-                    const getOdd = (res) => getProp(res, ['us', 'AmericanOdds', 'odd', 'Odd', 'price', 'dec']) || "-";
+                    const getOdd = (res) => getProp(res, ['us', 'AmericanOdds', 'odd', 'Odd', 'price', 'dec']);
 
-                    document.getElementById('cuota-local').innerText = formatMomio(getOdd(resultados[0]));
-                    document.getElementById('cuota-empate').innerText = formatMomio(getOdd(resultados[1]));
-                    document.getElementById('cuota-visita').innerText = formatMomio(getOdd(resultados[2]));
+                    const cL = formatMomio(getOdd(resultados[0]));
+                    const cE = formatMomio(getOdd(resultados[1]));
+                    const cV = formatMomio(getOdd(resultados[2]));
+
+                    if(cL) document.getElementById('cuota-local').innerText = cL;
+                    if(cE) document.getElementById('cuota-empate').innerText = cE;
+                    if(cV) document.getElementById('cuota-visita').innerText = cV;
                 }
 
-                // Asegurar el marcador a "0 - 0" en lugar de guiones al ser pre-partido
-                document.getElementById('marcador-local').innerText = "0";
-                document.getElementById('marcador-visita').innerText = "0";
+                // Conservar marcadores vivos si la API reporta goles pre-partido (inicialmente 0)
+                const hScore = getProp(eventoMexico, ['HomeScore', 'home_score']);
+                const aScore = getProp(eventoMexico, ['AwayScore', 'away_score']);
+                if (hScore != null) document.getElementById('marcador-local').innerText = hScore;
+                if (aScore != null) document.getElementById('marcador-visita').innerText = aScore;
 
             } catch (error) {
-                console.log("Error de actualización en cliente:", error.message);
+                console.log("Modo de Respaldo Activo:", error.message);
             } finally {
                 escaneoEnProgreso = false;
             }
         }
 
+        // Ejecución inmediata y bucle de refresco cada 30 segundos
         actualizarDatosSolos();
-        setInterval(actualizarDatosSolos, 30000); // Refresco cada 30 segundos
+        setInterval(actualizarDatosSolos, 30000);
     </script>
 </body>
 </html>
