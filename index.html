@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tablero Codere - MEX vs RSA</title>
+    <title>Tablero Codere - MEX vs RSA En Vivo</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Arial', sans-serif; }
         body { background-color: #111; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
@@ -14,7 +14,7 @@
         .data-overlay { 
             position: absolute; 
             z-index: 2; 
-            top: 65%; 
+            top: 58%; 
             left: 50%; 
             transform: translateX(-50%); 
             width: 88%; 
@@ -129,23 +129,21 @@
         }
 
         function procesarArrayEventos(arrayEventos) {
-            if (!Array.isArray(arrayEventos) || arrayEventos.length === 0) {
-                return { cuotaL: "-", cuotaE: "-", cuotaV: "-" };
-            }
+            if (!Array.isArray(arrayEventos) || arrayEventos.length === 0) return null;
+            
             const juegos = [];
             const resultados = [];
             for (let item of arrayEventos) {
                 if (!item.Value) continue;
-                const value = item.Value;
-                if (value.Type === "Game") juegos.push(value);
-                else if (value.Type === "Result") resultados.push(value);
+                if (item.Value.Type === "Game") juegos.push(item.Value);
+                else if (item.Value.Type === "Result") resultados.push(item.Value);
             }
             
             let mercadoPrincipal = juegos.find(j => j.GameType === 97) || juegos.find(j => j.GameType === 1) || juegos[0];
-            if (!mercadoPrincipal) return { cuotaL: "-", cuotaE: "-", cuotaV: "-" };
+            if (!mercadoPrincipal) return null;
             
             const resultadosMercado = resultados.filter(r => r.ParentNodeId === mercadoPrincipal.NodeId);
-            if (resultadosMercado.length === 0) return { cuotaL: "-", cuotaE: "-", cuotaV: "-" };
+            if (resultadosMercado.length === 0) return null;
             
             let cuotaL = "-", cuotaE = "-", cuotaV = "-";
             if (resultadosMercado.length >= 3) {
@@ -178,12 +176,12 @@
                 
                 let eventoMexico = null;
 
-                for (let liga of ligasReales.slice(0, 15)) {
+                // Solo busca en "liveEvents" para no detonar errores 404 de Vercel
+                for (let liga of ligasReales.slice(0, 20)) {
                     if (!liga.NodeId) continue;
-                    const eventos = await fetchCodere(`/leagues/${liga.NodeId}/liveEvents`);
                     
+                    const eventos = await fetchCodere(`/leagues/${liga.NodeId}/liveEvents`);
                     if (eventos && Array.isArray(eventos)) {
-                        // Mantenemos la búsqueda por "MEX" en el backend de Codere
                         eventoMexico = eventos.find(ev => ev.Name && (ev.Name.toUpperCase().includes("MEX") || ev.Name.toUpperCase().includes("MÉX")));
                         if (eventoMexico) break;
                     }
@@ -191,28 +189,31 @@
 
                 if (!eventoMexico) {
                     escaneoEnProgreso = false;
-                    return; 
+                    return; // Si no lo encuentra, se queda el tablero en estado neutro (guiones)
                 }
 
+                // Si lo encuentra, actualiza el marcador en vivo
                 document.getElementById('marcador-local').innerText = eventoMexico.HomeScore != null ? eventoMexico.HomeScore : "0";
                 document.getElementById('marcador-visita').innerText = eventoMexico.AwayScore != null ? eventoMexico.AwayScore : "0";
 
                 const arrayEventos = await fetchCodere(`/events/${eventoMexico.NodeId}`);
                 const cuotas = procesarArrayEventos(arrayEventos);
                 
-                if (cuotas.cuotaL !== "-") document.getElementById('cuota-local').innerText = cuotas.cuotaL;
-                if (cuotas.cuotaE !== "-") document.getElementById('cuota-empate').innerText = cuotas.cuotaE;
-                if (cuotas.cuotaV !== "-") document.getElementById('cuota-visita').innerText = cuotas.cuotaV;
+                if (cuotas) {
+                    if (cuotas.cuotaL !== "-") document.getElementById('cuota-local').innerText = cuotas.cuotaL;
+                    if (cuotas.cuotaE !== "-") document.getElementById('cuota-empate').innerText = cuotas.cuotaE;
+                    if (cuotas.cuotaV !== "-") document.getElementById('cuota-visita').innerText = cuotas.cuotaV;
+                }
 
             } catch (error) {
-                // Falla silenciosa
+                // Silencioso, protege la vista pública
             } finally {
                 escaneoEnProgreso = false;
             }
         }
 
         actualizarDatosSolos();
-        setInterval(actualizarDatosSolos, 60000);
+        setInterval(actualizarDatosSolos, 30000); // Se refresca cada 30 segundos
     </script>
 </body>
 </html>
