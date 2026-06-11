@@ -11,17 +11,17 @@
         .pantalla-display { position: relative; width: 325px; height: 960px; background-color: #000; overflow: hidden; box-shadow: 0px 0px 20px rgba(0,0,0,0.5); }
         .fondo-img { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1; }
 
-        /* Contenedor principal estilo tarjeta (Más pequeño y compacto) */
+        /* Contenedor principal estilo tarjeta */
         .data-overlay { 
             position: absolute; 
             z-index: 2; 
             top: 56.5%; 
             left: 50%; 
             transform: translateX(-50%); 
-            width: 72%; /* Reducido de 85% a 72% */
+            width: 72%; 
             background-color: #1a2024; 
             border-radius: 6px; 
-            padding: 12px 16px; /* Padding más ajustado */
+            padding: 12px 16px; 
             color: #FFF; 
         }
 
@@ -43,7 +43,7 @@
         }
         
         .team-name { 
-            font-size: 14px; /* Reducido de 18px */
+            font-size: 14px; 
             font-weight: 900; 
             letter-spacing: 0.5px;
         }
@@ -55,7 +55,7 @@
 
         /* Números del marcador */
         .score-board { 
-            font-size: 24px; /* Reducido de 32px */
+            font-size: 24px; 
             font-weight: 900; 
             display: flex; 
             align-items: center;
@@ -65,7 +65,7 @@
         /* Sección de Momios */
         .odds-title { 
             text-align: center; 
-            font-size: 10px; /* Reducido de 13px */
+            font-size: 10px; 
             font-weight: 800;
             margin-bottom: 10px; 
             letter-spacing: 0.5px; 
@@ -76,7 +76,7 @@
             justify-content: space-between; 
             align-items: center;
             border-bottom: 2px solid #3d4a22; 
-            padding: 8px 0; /* Espaciado vertical más compacto */
+            padding: 8px 0; 
         }
         
         .odd-row:last-child { 
@@ -85,26 +85,13 @@
         }
 
         .odd-label { 
-            font-size: 12px; /* Reducido de 15px */
+            font-size: 12px; 
             font-weight: bold; 
         }
         
         .odd-value { 
-            font-size: 13px; /* Reducido de 16px */
+            font-size: 13px; 
             font-weight: 900; 
-        }
-
-        /* Estado de carga */
-        .loading { 
-            text-align: center; 
-            color: #FFD700; 
-            font-size: 10px; 
-            position: absolute; 
-            top: -22px; 
-            left: 50%; 
-            transform: translateX(-50%); 
-            width: 100%; 
-            font-weight: bold;
         }
     </style>
 </head>
@@ -114,8 +101,6 @@
         <img src="https://jxwdncxtnhmrufvdxuti.supabase.co/storage/v1/object/public/banners-publicos/WhatsApp%20Image%202026-06-05%20at%2012.17.23%20PM.jpeg" alt="Fondo Promocional" class="fondo-img">
 
         <div class="data-overlay" id="widget-datos">
-            <div id="estado-carga" class="loading">Sincronizando...</div>
-
             <div class="match-info">
                 <div class="team-container">
                     <span class="dot dot-local"></span>
@@ -152,7 +137,7 @@
     </div>
 
     <script>
-        const MEXICO_EVENT_ID = "13177428310"; 
+        const MEXICO_EVENT_ID = "1317428310"; // El ID correcto del partido de hoy
         let actualizacionEnProgreso = false;
 
         async function fetchCodere(endpoint) {
@@ -230,12 +215,8 @@
         async function actualizarDatosMexico() {
             if (actualizacionEnProgreso) return;
             actualizacionEnProgreso = true;
-            
-            const estadoCarga = document.getElementById('estado-carga');
 
             try {
-                estadoCarga.style.display = 'block';
-
                 const arrayEventos = await fetchCodere(`/events/${MEXICO_EVENT_ID}`);
                 const datos = procesarDataDelPartido(arrayEventos);
 
@@ -247,9 +228,6 @@
                     document.getElementById('cuota-empate').innerText = datos.cuotaE;
                     document.getElementById('cuota-visita').innerText = datos.cuotaV;
                 }
-
-                estadoCarga.style.display = 'none';
-
             } catch (error) {
                 console.error("Error al actualizar datos: ", error);
             } finally {
