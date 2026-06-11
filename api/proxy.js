@@ -1,68 +1,50 @@
-module.exports = async function (req, res) {
-    // Configuración de CORS
-    res.setHeader('Access-Control-Allow-Credentials', true);
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', '*');
+// api/proxy.js
+export default async function handler(req, res) {
+  // Habilitar CORS (importante para peticiones desde el frontend)
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
-    if (req.method === 'OPTIONS') {
-        return res.status(200).end();
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
+  const { endpoint } = req.query;
+
+  if (!endpoint) {
+    console.error('Error: No se proporcionó el parámetro "endpoint"');
+    return res.status(400).json({ error: 'Se requiere un endpoint' });
+  }
+
+  try {
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const targetUrl = `https://codere-sbs-es.azurewebsites.net${cleanEndpoint}`;
+    console.log(`[Proxy] Solicitando: ${targetUrl}`);
+
+    const response = await fetch(targetUrl, {
+      method: 'GET',
+      headers: {
+        'accept': '*/*',
+        'Language': 'es'
+      }
+    });
+    
+    console.log(`[Proxy] Status Code: ${response.status}`);
+
+    if (!response.ok) {
+      console.error(`[Proxy] Error ${response.status} desde la API externa`);
+      return res.status(response.status).json({ 
+        error: `La API externa respondió con un error: ${response.status} ${response.statusText}` 
+      });
     }
 
-    const endpoint = req.query.endpoint;
-    const requestId = Date.now().toString(36) + Math.random().toString(36).substr(2);
+    const data = await response.json();
+    return res.status(200).json(data);
 
-    if (!endpoint) {
-        console.log(`[${requestId}] ❌ No se proporcionó endpoint`);
-        return res.status(400).json({ error: 'Se requiere un endpoint' });
-    }
-
-    try {
-        const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-        const urlCodere = `https://codere-sbs-es.azurewebsites.net${cleanEndpoint}`;
-        
-        console.log(`[${requestId}] 🌐 Solicitando: ${urlCodere}`);
-
-        const response = await fetch(urlCodere, {
-            method: 'GET',
-            headers: {
-                'accept': '*/*',
-                'Language': 'es'
-            }
-        });
-
-        console.log(`[${requestId}] 📡 Status: ${response.status}`);
-
-        if (response.status === 204) {
-            console.log(`[${requestId}] ⚠️ 204 No Content`);
-            return res.status(204).end();
-        }
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.log(`[${requestId}] ❌ Error ${response.status}:`, errorText.substring(0, 200));
-            return res.status(response.status).json({
-                error: `Rechazo de Codere (Status ${response.status})`,
-                url_intentada: urlCodere,
-                detalle: errorText.substring(0, 500)
-            });
-        }
-
-        const data = await response.json();
-        
-        if (Array.isArray(data)) {
-            console.log(`[${requestId}] ✅ Éxito - Array con ${data.length} elementos`);
-        } else {
-            console.log(`[${requestId}] ✅ Éxito - Objeto recibido`);
-        }
-
-        return res.status(200).json(data);
-
-    } catch (error) {
-        console.log(`[${requestId}] 💥 Error interno:`, error.message);
-        return res.status(500).json({
-            error: 'Fallo interno en Vercel',
-            detalle: error.toString()
-        });
-    }
-};
+  } catch (error) {
+    console.error(`[Proxy] Error interno: ${error.message}`);
+    return res.status(500).json({ error: 'Error interno del proxy' });
+  }
+}
