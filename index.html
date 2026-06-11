@@ -114,12 +114,37 @@
             }
         }
 
-        // Formatea el número para forzar el "+" en momios positivos americanos (ej. +330)
+        // Formatea el número para forzar el "+" en momios positivos americanos
         const formatMomio = (val) => {
             if (val == null || val === "") return "-";
             const num = Number(val);
             if (isNaN(num)) return val; 
             return num > 0 ? `+${num}` : num.toString();
+        };
+
+        // --- FUNCIONES PARA PARSEAR EL XML-JSON DE CODERE ---
+        
+        // Extrae arrays de forma segura ignorando el envoltorio ContentAPI
+        const getArray = (data, keyName) => {
+            if (!data) return [];
+            const content = data.ContentAPI || data;
+            let items = content[keyName] || content.Items || content;
+            
+            // Si hay un solo elemento, la API a veces lo devuelve como objeto en vez de array
+            if (items && typeof items === 'object' && !Array.isArray(items)) {
+                items = [items];
+            }
+            return Array.isArray(items) ? items : [];
+        };
+
+        // Busca la propiedad tenga o no tenga el '@' del XML
+        const getProp = (obj, propNames) => {
+            if (!obj) return null;
+            for (let prop of propNames) {
+                if (obj[`@${prop}`] !== undefined) return obj[`@${prop}`];
+                if (obj[prop] !== undefined) return obj[prop];
+            }
+            return null;
         };
 
         async function actualizarDatosSolos() {
@@ -128,60 +153,81 @@
 
             try {
                 // 1. Obtener Deporte (Fútbol)
-                const sports = await fetchCodere('/getSportsMexico');
-                if (!sports || !Array.isArray(sports)) throw new Error("Sin datos de deportes");
-                const futbol = sports.find(s => s.Name === "Fútbol" || s.Code === "SOCCER") || sports[0];
-                const sportCode = futbol.Code || futbol.sport_code || futbol.Id;
+                const sportsData = await fetchCodere('/getSportsMexico');
+                const sports = getArray(sportsData, 'Sport');
+                if (sports.length === 0) throw new Error("Sin datos de deportes");
+                
+                const futbol = sports.find(s => getProp(s, ['name', 'Name']) === "Fútbol" || getProp(s, ['sport_code', 'Code']) === "SOCCER") || sports[0];
+                const sportCode = getProp(futbol, ['sport_code', 'Code', 'Id']);
+                
+                if (!sportCode) throw new Error("No se pudo extraer el sport_code");
 
                 // 2. Obtener Clase (Buscando el Mundial 2026)
-                const classes = await fetchCodere(`/getClassesForSport/${sportCode}`);
-                if (!classes || !Array.isArray(classes)) throw new Error("Sin datos de clases");
-                const claseMundial = classes.find(c => c.Name && c.Name.includes("Mundial 2026")) || classes[0];
-                const classId = claseMundial.sb_class_id || claseMundial.Id;
+                const classesData = await fetchCodere(`/getClassesForSport/${sportCode}`);
+                const classes = getArray(classesData, 'Class');
+                if (classes.length === 0) throw new Error("Sin datos de clases");
+                
+                const claseMundial = classes.find(c => {
+                    const name = getProp(c, ['name', 'Name']);
+                    return name && name.includes("Mundial 2026");
+                }) || classes[0];
+                const classId = getProp(claseMundial, ['sb_class_id', 'Id']);
 
                 // 3. Obtener Tipo (Partidos)
-                const types = await fetchCodere(`/getTypesForClass/${classId}`);
-                if (!types || !Array.isArray(types)) throw new Error("Sin datos de tipos");
-                const tipoPartidos = types.find(t => t.Name && t.Name.includes("Partidos")) || types[0];
-                const typeId = tipoPartidos.sb_type_id || tipoPartidos.Id;
+                const typesData = await fetchCodere(`/getTypesForClass/${classId}`);
+                const types = getArray(typesData, 'Type');
+                if (types.length === 0) throw new Error("Sin datos de tipos");
+                
+                const tipoPartidos = types.find(t => {
+                    const name = getProp(t, ['name', 'Name']);
+                    return name && name.includes("Partidos");
+                }) || types[0];
+                const typeId = getProp(tipoPartidos, ['sb_type_id', 'Id']);
 
                 // 4. Obtener Evento (México v Sudáfrica)
-                const events = await fetchCodere(`/getEventsForType/${typeId}`);
-                if (!events || !Array.isArray(events)) throw new Error("Sin eventos");
+                const eventsData = await fetchCodere(`/getEventsForType/${typeId}`);
+                const events = getArray(eventsData, 'Event');
+                if (events.length === 0) throw new Error("Sin eventos");
                 
-                const eventoMexico = events.find(ev => ev.Name && (ev.Name.toUpperCase().includes("MÉXICO") || ev.Name.toUpperCase().includes("MEX")));
+                const eventoMexico = events.find(ev => {
+                    const name = getProp(ev, ['name', 'Name']);
+                    return name && (name.toUpperCase().includes("MÉXICO") || name.toUpperCase().includes("MEX"));
+                });
                 
                 if (!eventoMexico) {
                     escaneoEnProgreso = false;
-                    return; // Retiene los guiones neutros en el widget si el evento no está expuesto aún
+                    return; // Retiene los guiones si aún no se expone el evento
                 }
 
-                const evId = eventoMexico.ev_id || eventoMexico.Id;
+                const evId = getProp(eventoMexico, ['ev_id', 'Id']);
 
                 // 5. Obtener Mercados del Evento
-                const markets = await fetchCodere(`/getMarketsByEvent/${evId}`);
-                if (!markets || !Array.isArray(markets)) throw new Error("Sin mercados");
+                const marketsData = await fetchCodere(`/getMarketsByEvent/${evId}`);
+                const markets = getArray(marketsData, 'Market');
+                if (markets.length === 0) throw new Error("Sin mercados");
                 
-                // Buscamos "1X2 - Momios Mejorados" como se ve en tu imagen
-                const mercado1x2 = markets.find(m => m.Name && (m.Name.includes("1X2") || m.Name.includes("Ganador"))) || markets[0];
-                const resultados = mercado1x2.Selections || mercado1x2.Results || mercado1x2.Items || [];
+                const mercado1x2 = markets.find(m => {
+                    const name = getProp(m, ['name', 'Name']);
+                    return name && (name.includes("1X2") || name.includes("Ganador"));
+                }) || markets[0];
+                
+                const resultados = getArray(mercado1x2, 'Selection') || getArray(mercado1x2, 'Result') || [];
 
                 // 6. Inyectar datos en la pantalla
                 if (resultados.length >= 3) {
-                    // Soporte dinámico para el nombre de la propiedad (Odd, AmericanOdds o Price)
-                    const getOdd = (res) => res.Odd || res.AmericanOdds || res.Price || "-";
+                    const getOdd = (res) => getProp(res, ['odd', 'Odd', 'price', 'AmericanOdds']) || "-";
 
                     document.getElementById('cuota-local').innerText = formatMomio(getOdd(resultados[0]));
                     document.getElementById('cuota-empate').innerText = formatMomio(getOdd(resultados[1]));
                     document.getElementById('cuota-visita').innerText = formatMomio(getOdd(resultados[2]));
                 }
 
-                // Asegurar marcador inicial en 0 al ser pre-partido
+                // Asegurar marcador inicial
                 document.getElementById('marcador-local').innerText = "0";
                 document.getElementById('marcador-visita').innerText = "0";
 
             } catch (error) {
-                // Falla silenciosa para evitar parpadeos extraños en la vista de producción
+                console.log("Falla en actualización:", error.message);
             } finally {
                 escaneoEnProgreso = false;
             }
