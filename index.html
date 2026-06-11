@@ -114,30 +114,35 @@
             }
         }
 
-        // Formatea el número para forzar el "+" en momios positivos americanos
+        // Formatea el número. Respeta decimales o inyecta el "+" en momios americanos enteros.
         const formatMomio = (val) => {
-            if (val == null || val === "") return "-";
+            if (val == null || val === "" || val === "-") return "-";
+            const strVal = val.toString();
+            if (strVal.includes('.')) return strVal; // Es decimal (ej. 1.50)
+            
             const num = Number(val);
             if (isNaN(num)) return val; 
-            return num > 0 ? `+${num}` : num.toString();
+            return num > 0 ? `+${num}` : num.toString(); // Es americano (ej. +330, -233)
         };
 
-        // --- FUNCIONES PARA PARSEAR EL XML-JSON DE CODERE ---
-        
-        // Extrae arrays de forma segura ignorando el envoltorio ContentAPI
-        const getArray = (data, keyName) => {
-            if (!data) return [];
-            const content = data.ContentAPI || data;
-            let items = content[keyName] || content.Items || content;
-            
-            // Si hay un solo elemento, la API a veces lo devuelve como objeto en vez de array
-            if (items && typeof items === 'object' && !Array.isArray(items)) {
-                items = [items];
+        // --- BÚSQUEDA RECURSIVA (LA SOLUCIÓN AL ERROR DE ESTRUCTURA) ---
+        // Escarba en el JSON para encontrar el nodo, sin importar qué tan anidado esté
+        const findNode = (obj, key) => {
+            if (!obj || typeof obj !== 'object') return null;
+            if (key in obj) return obj[key];
+            for (let k in obj) {
+                let res = findNode(obj[k], key);
+                if (res) return res;
             }
-            return Array.isArray(items) ? items : [];
+            return null;
         };
 
-        // Busca la propiedad tenga o no tenga el '@' del XML
+        const getArray = (data, keyName) => {
+            let items = findNode(data, keyName);
+            if (!items) return [];
+            return Array.isArray(items) ? items : [items];
+        };
+
         const getProp = (obj, propNames) => {
             if (!obj) return null;
             for (let prop of propNames) {
@@ -159,10 +164,9 @@
                 
                 const futbol = sports.find(s => getProp(s, ['name', 'Name']) === "Fútbol" || getProp(s, ['sport_code', 'Code']) === "SOCCER") || sports[0];
                 const sportCode = getProp(futbol, ['sport_code', 'Code', 'Id']);
-                
                 if (!sportCode) throw new Error("No se pudo extraer el sport_code");
 
-                // 2. Obtener Clase (Buscando el Mundial 2026)
+                // 2. Obtener Clase (Mundial 2026)
                 const classesData = await fetchCodere(`/getClassesForSport/${sportCode}`);
                 const classes = getArray(classesData, 'Class');
                 if (classes.length === 0) throw new Error("Sin datos de clases");
@@ -172,6 +176,7 @@
                     return name && name.includes("Mundial 2026");
                 }) || classes[0];
                 const classId = getProp(claseMundial, ['sb_class_id', 'Id']);
+                if (!classId) throw new Error("No se pudo extraer el classId");
 
                 // 3. Obtener Tipo (Partidos)
                 const typesData = await fetchCodere(`/getTypesForClass/${classId}`);
@@ -183,6 +188,7 @@
                     return name && name.includes("Partidos");
                 }) || types[0];
                 const typeId = getProp(tipoPartidos, ['sb_type_id', 'Id']);
+                if (!typeId) throw new Error("No se pudo extraer el typeId");
 
                 // 4. Obtener Evento (México v Sudáfrica)
                 const eventsData = await fetchCodere(`/getEventsForType/${typeId}`);
@@ -190,16 +196,17 @@
                 if (events.length === 0) throw new Error("Sin eventos");
                 
                 const eventoMexico = events.find(ev => {
-                    const name = getProp(ev, ['name', 'Name']);
+                    const name = getProp(ev, ['name', 'Name', 'event_name']);
                     return name && (name.toUpperCase().includes("MÉXICO") || name.toUpperCase().includes("MEX"));
                 });
                 
                 if (!eventoMexico) {
                     escaneoEnProgreso = false;
-                    return; // Retiene los guiones si aún no se expone el evento
+                    return; // Si no hay evento expuesto, se quedan los guiones en la pantalla
                 }
 
                 const evId = getProp(eventoMexico, ['ev_id', 'Id']);
+                if (!evId) throw new Error("No se pudo extraer el evId");
 
                 // 5. Obtener Mercados del Evento
                 const marketsData = await fetchCodere(`/getMarketsByEvent/${evId}`);
@@ -208,26 +215,27 @@
                 
                 const mercado1x2 = markets.find(m => {
                     const name = getProp(m, ['name', 'Name']);
-                    return name && (name.includes("1X2") || name.includes("Ganador"));
+                    return name && (name.includes("1X2") || name.includes("Ganador") || name.includes("Match Betting"));
                 }) || markets[0];
                 
                 const resultados = getArray(mercado1x2, 'Selection') || getArray(mercado1x2, 'Result') || [];
 
                 // 6. Inyectar datos en la pantalla
                 if (resultados.length >= 3) {
-                    const getOdd = (res) => getProp(res, ['odd', 'Odd', 'price', 'AmericanOdds']) || "-";
+                    // Busca el momio americano o decimal bajo los distintos nombres que usa Codere/Geneity
+                    const getOdd = (res) => getProp(res, ['us', 'AmericanOdds', 'odd', 'Odd', 'price', 'dec']) || "-";
 
                     document.getElementById('cuota-local').innerText = formatMomio(getOdd(resultados[0]));
                     document.getElementById('cuota-empate').innerText = formatMomio(getOdd(resultados[1]));
                     document.getElementById('cuota-visita').innerText = formatMomio(getOdd(resultados[2]));
                 }
 
-                // Asegurar marcador inicial
+                // Asegurar el marcador a "0 - 0" en lugar de guiones al ser pre-partido
                 document.getElementById('marcador-local').innerText = "0";
                 document.getElementById('marcador-visita').innerText = "0";
 
             } catch (error) {
-                console.log("Falla en actualización:", error.message);
+                console.log("Error de actualización en cliente:", error.message);
             } finally {
                 escaneoEnProgreso = false;
             }
