@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tablero Codere Broadsign - Full Stretch Ajustado</title>
+    <title>Tablero Codere Broadsign - Modo Finalizado Dinámico</title>
     <style>
         /* 1. EL FONDO: Forzado al 100% exacto del frame de Broadsign */
         html, body {
@@ -29,16 +29,17 @@
         .data-overlay { 
             position: absolute; 
             z-index: 2; 
-            /* AQUÍ ESTÁ EL AJUSTE: Cambiado de 55vh a 65vh para bajar el modal */
             top: 65vh; 
             transform: translateY(-50%); 
-            width: 85vw; /* Se ajusta al ancho del tótem */
+            width: 85vw; 
             max-width: 320px; 
             background-color: #1a2024; 
             border-radius: 6px; 
             padding: 4vw; 
             color: #FFF; 
             box-shadow: 0px 10px 20px rgba(0,0,0,0.6);
+            /* Transición suave por si cambia de tamaño al ocultar los momios */
+            transition: all 0.3s ease-in-out; 
         }
 
         /* Sección del Marcador */
@@ -58,7 +59,6 @@
             gap: 1.5vw; 
         }
         
-        /* Fuentes elásticas para evitar desbordamientos */
         .team-name { 
             font-size: clamp(12px, 4.5vw, 18px); 
             font-weight: 900; 
@@ -113,7 +113,7 @@
 <body>
 
     <div class="data-overlay" id="widget-datos">
-        <div class="match-info">
+        <div class="match-info" id="contenedor-marcador">
             <div class="team-container">
                 <span class="dot dot-local"></span>
                 <span class="team-name">MEX</span>
@@ -129,9 +129,9 @@
             </div>
         </div>
 
-        <h4 class="odds-title">OPCIONES DE APUESTA</h4>
+        <h4 class="odds-title" id="titulo-seccion">OPCIONES DE APUESTA</h4>
         
-        <div class="odds-section">
+        <div class="odds-section" id="seccion-momios">
             <div class="odd-row">
                 <span class="odd-label">GANA MEX</span>
                 <span class="odd-value" id="cuota-local">--</span>
@@ -150,14 +150,27 @@
     <script>
         const MEXICO_EVENT_ID = "13177428310"; 
         let actualizacionEnProgreso = false;
+        let intervaloActualizacion;
+
+        // ==========================================
+        // MARCADOR FINAL DE RESPALDO
+        // ==========================================
+        const MARCADOR_FINAL_MEX = 2; 
+        const MARCADOR_FINAL_RSA = 0; 
+        // ==========================================
 
         async function fetchCodere(endpoint) {
             try {
                 const url = `/api/proxy?endpoint=${encodeURIComponent(endpoint)}`;
                 const response = await fetch(url);
+                
+                // Detectamos si el partido ya no existe (404)
+                if (response.status === 404) return "TERMINADO"; 
                 if (response.status === 204) return null;
+                
                 const data = await response.json();
-                if (!response.ok) throw new Error(`Status: ${response.status}`);
+                if (!response.ok) return null;
+                
                 return data;
             } catch (error) {
                 return null;
@@ -223,13 +236,42 @@
             return dataPartido;
         }
 
+        function mostrarMarcadorFinal() {
+            // 1. Fijar el marcador definitivo
+            document.getElementById('marcador-local').innerText = MARCADOR_FINAL_MEX;
+            document.getElementById('marcador-visita').innerText = MARCADOR_FINAL_RSA;
+            
+            // 2. Quitar la línea divisoria del marcador para que la tarjeta se vea unificada
+            document.getElementById('contenedor-marcador').style.borderBottom = "none";
+            document.getElementById('contenedor-marcador').style.marginBottom = "0";
+            document.getElementById('contenedor-marcador').style.paddingBottom = "0";
+            
+            // 3. Ocultar las filas de momios
+            document.getElementById('seccion-momios').style.display = 'none';
+            
+            // 4. Cambiar el título a "PARTIDO FINALIZADO"
+            const titulo = document.getElementById('titulo-seccion');
+            titulo.innerText = "PARTIDO FINALIZADO";
+            titulo.style.color = "#00C800"; // Le damos un color verde de éxito
+            titulo.style.marginTop = "10px";
+            titulo.style.marginBottom = "0";
+        }
+
         async function actualizarDatosMexico() {
             if (actualizacionEnProgreso) return;
             actualizacionEnProgreso = true;
 
             try {
-                const arrayEventos = await fetchCodere(`/events/${MEXICO_EVENT_ID}`);
-                const datos = procesarDataDelPartido(arrayEventos);
+                const respuestaApi = await fetchCodere(`/events/${MEXICO_EVENT_ID}`);
+                
+                // Si la API arroja 404 (Partido archivado)
+                if (respuestaApi === "TERMINADO") {
+                    mostrarMarcadorFinal();
+                    clearInterval(intervaloActualizacion); 
+                    return;
+                }
+
+                const datos = procesarDataDelPartido(respuestaApi);
 
                 if (datos) {
                     document.getElementById('marcador-local').innerText = datos.marcadorLocal;
@@ -245,8 +287,9 @@
             }
         }
 
+        // Carga inicial y ciclo
         actualizarDatosMexico();
-        setInterval(actualizarDatosMexico, 30000);
+        intervaloActualizacion = setInterval(actualizarDatosMexico, 30000);
     </script>
 </body>
-</html> 
+</html>
