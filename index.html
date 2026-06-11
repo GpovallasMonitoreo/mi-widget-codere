@@ -3,26 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tablero Codere en Vivo - Selección Mexicana</title>
+    <title>Tablero Codere Broadsign - Full Stretch Ajustado</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Arial', sans-serif; }
-        body { background-color: #111; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+        /* 1. EL FONDO: Forzado al 100% exacto del frame de Broadsign */
+        html, body {
+            margin: 0; 
+            padding: 0;
+            width: 100vw; 
+            height: 100vh;
+            background-color: #0d1418;
+            background-image: url('https://jxwdncxtnhmrufvdxuti.supabase.co/storage/v1/object/public/banners-publicos/WhatsApp%20Image%202026-06-05%20at%2012.17.23%20PM.jpeg');
+            
+            /* LA CLAVE PARA QUE SE VEA COMPLETO SIN REPETIRSE NI CORTARSE */
+            background-size: 100% 100%; 
+            background-repeat: no-repeat; 
+            background-position: center; 
+            
+            overflow: hidden;
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+        }
 
-        .pantalla-display { position: relative; width: 325px; height: 960px; background-color: #000; overflow: hidden; box-shadow: 0px 0px 20px rgba(0,0,0,0.5); }
-        .fondo-img { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1; }
-
-        /* Contenedor principal estilo tarjeta */
+        /* 2. EL MODAL: Posicionamiento elástico */
         .data-overlay { 
             position: absolute; 
             z-index: 2; 
-            top: 67.5%; /* ¡AQUÍ ESTÁ EL AJUSTE! Cambiado de 56.5% a 67.5% para bajar el modal */
-            left: 50%; 
-            transform: translateX(-50%); 
-            width: 72%; 
+            /* AQUÍ ESTÁ EL AJUSTE: Cambiado de 55vh a 65vh para bajar el modal */
+            top: 65vh; 
+            transform: translateY(-50%); 
+            width: 85vw; /* Se ajusta al ancho del tótem */
+            max-width: 320px; 
             background-color: #1a2024; 
             border-radius: 6px; 
-            padding: 12px 16px; 
+            padding: 4vw; 
             color: #FFF; 
+            box-shadow: 0px 10px 20px rgba(0,0,0,0.6);
         }
 
         /* Sección del Marcador */
@@ -30,44 +46,43 @@
             display: flex; 
             justify-content: center; 
             align-items: center; 
-            gap: 12px; 
+            gap: 2vw; 
             border-bottom: 2px solid #3d4a22; 
-            padding-bottom: 10px; 
-            margin-bottom: 10px; 
+            padding-bottom: 3vw; 
+            margin-bottom: 3vw; 
         }
         
         .team-container { 
             display: flex; 
             align-items: center; 
-            gap: 6px; 
+            gap: 1.5vw; 
         }
         
+        /* Fuentes elásticas para evitar desbordamientos */
         .team-name { 
-            font-size: 14px; 
+            font-size: clamp(12px, 4.5vw, 18px); 
             font-weight: 900; 
             letter-spacing: 0.5px;
         }
 
-        /* Puntos de colores */
         .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
         .dot-local { background-color: #00C800; } 
         .dot-visita { background-color: #FFD700; } 
 
-        /* Números del marcador */
         .score-board { 
-            font-size: 24px; 
+            font-size: clamp(24px, 8vw, 32px); 
             font-weight: 900; 
             display: flex; 
             align-items: center;
         }
-        .score-board .separator { margin: 0 4px; }
+        .score-board .separator { margin: 0 1vw; }
 
         /* Sección de Momios */
         .odds-title { 
             text-align: center; 
-            font-size: 10px; 
+            font-size: clamp(9px, 3.5vw, 12px); 
             font-weight: 800;
-            margin-bottom: 10px; 
+            margin-bottom: 3vw; 
             letter-spacing: 0.5px; 
         }
 
@@ -76,7 +91,7 @@
             justify-content: space-between; 
             align-items: center;
             border-bottom: 2px solid #3d4a22; 
-            padding: 8px 0; 
+            padding: 2.5vw 0; 
         }
         
         .odd-row:last-child { 
@@ -85,53 +100,49 @@
         }
 
         .odd-label { 
-            font-size: 12px; 
+            font-size: clamp(11px, 4vw, 15px); 
             font-weight: bold; 
         }
         
         .odd-value { 
-            font-size: 13px; 
+            font-size: clamp(12px, 4.2vw, 16px); 
             font-weight: 900; 
         }
     </style>
 </head>
 <body>
 
-    <div class="pantalla-display">
-        <img src="https://jxwdncxtnhmrufvdxuti.supabase.co/storage/v1/object/public/banners-publicos/WhatsApp%20Image%202026-06-05%20at%2012.17.23%20PM.jpeg" alt="Fondo Promocional" class="fondo-img">
-
-        <div class="data-overlay" id="widget-datos">
-            <div class="match-info">
-                <div class="team-container">
-                    <span class="dot dot-local"></span>
-                    <span class="team-name">MEX</span>
-                </div>
-                <div class="score-board">
-                    <span id="marcador-local">0</span>
-                    <span class="separator">-</span>
-                    <span id="marcador-visita">0</span>
-                </div>
-                <div class="team-container">
-                    <span class="team-name">RSA</span>
-                    <span class="dot dot-visita"></span>
-                </div>
+    <div class="data-overlay" id="widget-datos">
+        <div class="match-info">
+            <div class="team-container">
+                <span class="dot dot-local"></span>
+                <span class="team-name">MEX</span>
             </div>
+            <div class="score-board">
+                <span id="marcador-local">0</span>
+                <span class="separator">-</span>
+                <span id="marcador-visita">0</span>
+            </div>
+            <div class="team-container">
+                <span class="team-name">RSA</span>
+                <span class="dot dot-visita"></span>
+            </div>
+        </div>
 
-            <h4 class="odds-title">OPCIONES DE APUESTA</h4>
-            
-            <div class="odds-section">
-                <div class="odd-row">
-                    <span class="odd-label">GANA MEX</span>
-                    <span class="odd-value" id="cuota-local">--</span>
-                </div>
-                <div class="odd-row">
-                    <span class="odd-label">EMPATE</span>
-                    <span class="odd-value" id="cuota-empate">--</span>
-                </div>
-                <div class="odd-row">
-                    <span class="odd-label">GANA RSA</span>
-                    <span class="odd-value" id="cuota-visita">--</span>
-                </div>
+        <h4 class="odds-title">OPCIONES DE APUESTA</h4>
+        
+        <div class="odds-section">
+            <div class="odd-row">
+                <span class="odd-label">GANA MEX</span>
+                <span class="odd-value" id="cuota-local">--</span>
+            </div>
+            <div class="odd-row">
+                <span class="odd-label">EMPATE</span>
+                <span class="odd-value" id="cuota-empate">--</span>
+            </div>
+            <div class="odd-row">
+                <span class="odd-label">GANA RSA</span>
+                <span class="odd-value" id="cuota-visita">--</span>
             </div>
         </div>
     </div>
@@ -149,22 +160,26 @@
                 if (!response.ok) throw new Error(`Status: ${response.status}`);
                 return data;
             } catch (error) {
-                console.error("Error en fetchCodere:", error);
                 return null;
             }
         }
 
+        const formatMomio = (val) => {
+            if (val == null || val === "" || val === "-") return "N/D";
+            const strVal = val.toString();
+            if (strVal.includes('.')) {
+                const num = Number(val);
+                return !isNaN(num) ? num.toFixed(2) : strVal;
+            }
+            const num = Number(val);
+            if (isNaN(num)) return val;
+            return num > 0 ? `+${num}` : num.toString();
+        };
+
         function procesarDataDelPartido(arrayEventos) {
             if (!Array.isArray(arrayEventos) || arrayEventos.length === 0) return null;
             
-            let dataPartido = {
-                marcadorLocal: 0,
-                marcadorVisita: 0,
-                cuotaL: "N/D",
-                cuotaE: "N/D",
-                cuotaV: "N/D"
-            };
-
+            let dataPartido = { marcadorLocal: 0, marcadorVisita: 0, cuotaL: "N/D", cuotaE: "N/D", cuotaV: "N/D" };
             const juegos = [];
             const resultados = [];
 
@@ -180,11 +195,8 @@
                 }
             }
 
-            let mercadoPrincipal = juegos.find(j => j.GameType === 1 || j.GameType === 97 || j.GameType === 159);
-            
-            if (!mercadoPrincipal) {
-                mercadoPrincipal = juegos.find(j => j.NodeName && j.NodeName.toUpperCase().includes("RESULTADO"));
-            }
+            let mercadoPrincipal = juegos.find(j => j.GameType === 1 || j.GameType === 97 || j.GameType === 159) || 
+                                   juegos.find(j => j.NodeName && j.NodeName.toUpperCase().includes("RESULTADO"));
 
             if (mercadoPrincipal) {
                 const resultadosMercado = resultados.filter(r => r.ParentNodeId === mercadoPrincipal.NodeId);
@@ -199,16 +211,15 @@
                 });
 
                 if (resultadosMercado.length >= 3) {
-                    let cL = resultadosMercado[0].Odd || resultadosMercado[0].Price || "N/D";
-                    let cE = resultadosMercado[1].Odd || resultadosMercado[1].Price || "N/D";
-                    let cV = resultadosMercado[2].Odd || resultadosMercado[2].Price || "N/D";
+                    let cL = resultadosMercado[0].AmericanOdds || resultadosMercado[0].Odd || resultadosMercado[0].Price || "N/D";
+                    let cE = resultadosMercado[1].AmericanOdds || resultadosMercado[1].Odd || resultadosMercado[1].Price || "N/D";
+                    let cV = resultadosMercado[2].AmericanOdds || resultadosMercado[2].Odd || resultadosMercado[2].Price || "N/D";
 
-                    dataPartido.cuotaL = typeof cL === 'number' ? cL.toFixed(2) : cL;
-                    dataPartido.cuotaE = typeof cE === 'number' ? cE.toFixed(2) : cE;
-                    dataPartido.cuotaV = typeof cV === 'number' ? cV.toFixed(2) : cV;
+                    dataPartido.cuotaL = formatMomio(cL);
+                    dataPartido.cuotaE = formatMomio(cE);
+                    dataPartido.cuotaV = formatMomio(cV);
                 }
             }
-
             return dataPartido;
         }
 
@@ -223,7 +234,6 @@
                 if (datos) {
                     document.getElementById('marcador-local').innerText = datos.marcadorLocal;
                     document.getElementById('marcador-visita').innerText = datos.marcadorVisita;
-                    
                     document.getElementById('cuota-local').innerText = datos.cuotaL;
                     document.getElementById('cuota-empate').innerText = datos.cuotaE;
                     document.getElementById('cuota-visita').innerText = datos.cuotaV;
