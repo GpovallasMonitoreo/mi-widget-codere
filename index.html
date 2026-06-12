@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tablero Codere Mundial 2026 - Automatización Cronológica</title>
+    <title>Tablero Codere Broadsign - Mundial Priorizado</title>
     <style>
         /* 1. EL FONDO: Forzado al 100% exacto del frame de Broadsign */
         html, body {
@@ -12,7 +12,7 @@
             width: 100vw; 
             height: 100vh;
             background-color: #0d1418;
-            background-image: url('https://jxwdncxtnhmrufvdxuti.supabase.co/storage/v1/object/public/banners-publicos/WhatsApp%20Image%202026-06-05%20at%2012.17.23%20PM.jpeg');
+            background-image: url('https://jxwdncxtnhmrufvdxuti.supabase.co/storage/v1/object/public/banners-publicos/WhatsApp%20Image%202026-06-09%20at%208.40.30%20PM.jpeg');
             background-size: 100% 100%; 
             background-repeat: no-repeat; 
             background-position: center; 
@@ -53,17 +53,12 @@
             display: flex; 
             align-items: center; 
             gap: 1.5vw; 
-            width: 35%;
         }
-        .team-container.right { justify-content: flex-end; text-align: right; }
         
         .team-name { 
             font-size: clamp(12px, 4.5vw, 18px); 
             font-weight: 900; 
             letter-spacing: 0.5px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
         }
 
         .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
@@ -74,9 +69,7 @@
             font-size: clamp(24px, 8vw, 32px); 
             font-weight: 900; 
             display: flex; 
-            justify-content: center;
             align-items: center;
-            width: 30%;
         }
         .score-board .separator { margin: 0 1vw; }
 
@@ -112,12 +105,15 @@
             font-weight: 900; 
         }
 
+        /* Estilo para el estado de Partido Finalizado */
         .finished-text { 
             color: #00C800 !important; 
             font-size: clamp(13px, 4.5vw, 16px) !important; 
             margin-bottom: 0 !important; 
             padding-top: 2vw;
         }
+        .live-text { color: #FF0000 !important; }
+        .pre-text { color: #00E5FF !important; }
     </style>
 </head>
 <body>
@@ -139,7 +135,7 @@
             </div>
         </div>
 
-        <h4 class="odds-title" id="titulo-seccion">SINCRONIZANDO MUNDIAL...</h4>
+        <h4 class="odds-title" id="titulo-seccion">&nbsp;</h4>
         
         <div class="odds-section" id="seccion-momios">
             <div class="odd-row">
@@ -158,6 +154,9 @@
     </div>
 
     <script>
+        // EL OBJETIVO PRINCIPAL: ID DE COREA VS CHEQUIA
+        const PARTIDO_PRIORIDAD_ID = "13177476190"; 
+        
         let actualizacionEnProgreso = false;
         let partidosDisponibles = [];
         let indicePartidoActual = 0;
@@ -189,10 +188,11 @@
         const obtenerAbreviatura = (nombre) => {
             if (!nombre) return "---";
             const nombreLimpio = nombre.trim().toUpperCase();
+            // Diccionario expandido con Croacia
             const diccionario = {
                 "MÉXICO": "MEX", "MEXICO": "MEX", "SUDÁFRICA": "RSA", "SUDAFRICA": "RSA",
                 "BRASIL": "BRA", "ARGENTINA": "ARG", "ALEMANIA": "GER", "ESPAÑA": "ESP",
-                "INGLATERRA": "ENG", "ENGLAND": "ENG", "FRANCIA": "FRA", "ESTADOS UNIDOS": "USA",
+                "INGLATERRA": "ENG", "FRANCIA": "FRA", "ESTADOS UNIDOS": "USA",
                 "COREA": "KOR", "COREA DEL SUR": "KOR", "SOUTH KOREA": "KOR",
                 "CHEQUIA": "CZE", "REPÚBLICA CHECA": "CZE", "REPUBLICA CHECA": "CZE", "CZECH REPUBLIC": "CZE",
                 "CROACIA": "CRO", "CROATIA": "CRO"
@@ -200,7 +200,7 @@
             return diccionario[nombreLimpio] || nombreLimpio.substring(0, 3);
         };
 
-        // ESCÁNER DEL MUNDIAL COMPLETO CON ORDEN CRONOLÓGICO
+        // ESCÁNER CON FILTRO DE PRIORIDAD
         async function escanearPartidosMundial() {
             let resultado = { live: [], upcoming: [] };
             try {
@@ -229,15 +229,9 @@
                     if (Array.isArray(proximos)) resultado.upcoming.push(...proximos.map(e => ({...e, isLive: false})));
                 }
 
-                // ORDENAR CRONOLÓGICAMENTE LOS PRÓXIMOS PARTIDOS
-                resultado.upcoming.sort((a, b) => {
-                    let fechaA = new Date(a.StartDate || a.StartTime || 0).getTime();
-                    let fechaB = new Date(b.StartDate || b.StartTime || 0).getTime();
-                    return fechaA - fechaB;
-                });
-
-                // LIMITAR A LOS 3 PARTIDOS MÁS PRÓXIMOS PARA NO ROTAR INFINITAMENTE
-                resultado.upcoming = resultado.upcoming.slice(0, 3);
+                // ORDENAMIENTO MAESTRO: Si existe Corea vs Chequia, lo empujamos al inicio de la fila
+                resultado.live.sort((a, b) => a.NodeId === PARTIDO_PRIORIDAD_ID ? -1 : (b.NodeId === PARTIDO_PRIORIDAD_ID ? 1 : 0));
+                resultado.upcoming.sort((a, b) => a.NodeId === PARTIDO_PRIORIDAD_ID ? -1 : (b.NodeId === PARTIDO_PRIORIDAD_ID ? 1 : 0));
 
                 return resultado;
             } catch (err) { return resultado; }
@@ -279,6 +273,7 @@
             let scoreL = partido.HomeScore != null ? partido.HomeScore : "0";
             let scoreV = partido.AwayScore != null ? partido.AwayScore : "0";
 
+            // Grabamos en disco
             const memoria = { local, visita, scoreL, scoreV };
             localStorage.setItem('ultimoPartidoCodere', JSON.stringify(memoria));
             localStorage.setItem('ultimoPartidoCodere_wasLive', partido.isLive ? "true" : "false");
@@ -293,8 +288,9 @@
             document.getElementById('cuota-empate').innerText = momios.cuotaE;
             document.getElementById('cuota-visita').innerText = momios.cuotaV;
 
-            document.getElementById('titulo-seccion').innerText = "OPCIONES DE APUESTA";
-            document.getElementById('titulo-seccion').classList.remove('finished-text');
+            const titulo = document.getElementById('titulo-seccion');
+            titulo.innerText = "OPCIONES DE APUESTA";
+            titulo.className = "odds-title";
             
             document.getElementById('seccion-momios').style.display = 'block';
             document.getElementById('contenedor-marcador').style.borderBottom = "2px solid #3d4a22";
@@ -311,12 +307,11 @@
             document.getElementById('contenedor-marcador').style.borderBottom = "none";
             document.getElementById('contenedor-marcador').style.marginBottom = "0";
             document.getElementById('contenedor-marcador').style.paddingBottom = "0";
-            
             document.getElementById('seccion-momios').style.display = 'none';
             
             const titulo = document.getElementById('titulo-seccion');
             titulo.innerText = "PARTIDO FINALIZADO";
-            titulo.classList.add('finished-text');
+            titulo.className = "odds-title finished-text";
         }
 
         async function cicloPrincipal() {
@@ -324,10 +319,11 @@
             actualizacionEnProgreso = true;
 
             try {
+                // 1. REGLA DE LOS 10 MINUTOS 
                 const horaFinalStr = localStorage.getItem('horaFinalPartido');
                 if (horaFinalStr) {
                     const tiempoPasado = Date.now() - parseInt(horaFinalStr);
-                    if (tiempoPasado < 600000) { 
+                    if (tiempoPasado < 600000) { // 600,000 milisegundos = 10 minutos
                         const memo = JSON.parse(localStorage.getItem('ultimoPartidoCodere'));
                         if (memo) renderizarPartidoFinalizado(memo.local, memo.visita, memo.scoreL, memo.scoreV);
                         actualizacionEnProgreso = false;
@@ -337,9 +333,11 @@
                     }
                 }
 
+                // 2. Extraer datos frescos
                 const partidos = await escanearPartidosMundial();
 
                 if (partidos.live.length > 0) {
+                    // PARTIDO EN VIVO
                     modoCarrusel = false;
                     localStorage.removeItem('horaFinalPartido'); 
 
@@ -349,6 +347,7 @@
                     renderizarPartidoActivo(partidoVivo, momios);
 
                 } else if (partidos.upcoming.length > 0) {
+                    // PARTIDOS PROGRAMADOS (Pre-Match)
                     const ultimoLive = localStorage.getItem('ultimoPartidoCodere_wasLive');
                     if (ultimoLive === "true") {
                         localStorage.setItem('horaFinalPartido', Date.now().toString());
@@ -370,6 +369,7 @@
                     renderizarPartidoActivo(partidoPre, momios);
 
                 } else {
+                    // NO HAY PARTIDOS EN LA API
                     const ultimoLive = localStorage.getItem('ultimoPartidoCodere_wasLive');
                     if (ultimoLive === "true") {
                         localStorage.setItem('horaFinalPartido', Date.now().toString());
@@ -385,6 +385,7 @@
             }
         }
 
+        // CARRUSEL: Rota cada 15 segundos entre los partidos programados
         function iniciarCarrusel() {
             setInterval(() => {
                 if (modoCarrusel && partidosProgramados.length > 1) {
@@ -394,6 +395,7 @@
             }, 15000);
         }
 
+        // ARRANQUE
         cicloPrincipal();
         setInterval(cicloPrincipal, 30000);
         iniciarCarrusel();
