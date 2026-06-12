@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tablero Codere Broadsign - Full Automático Mundial</title>
+    <title>Tablero Codere Mundial 2026 - Automatización Cronológica</title>
     <style>
         /* 1. EL FONDO: Forzado al 100% exacto del frame de Broadsign */
         html, body {
@@ -13,12 +13,9 @@
             height: 100vh;
             background-color: #0d1418;
             background-image: url('https://jxwdncxtnhmrufvdxuti.supabase.co/storage/v1/object/public/banners-publicos/WhatsApp%20Image%202026-06-05%20at%2012.17.23%20PM.jpeg');
-            
-            /* LA CLAVE PARA QUE SE VEA COMPLETO SIN REPETIRSE NI CORTARSE */
             background-size: 100% 100%; 
             background-repeat: no-repeat; 
             background-position: center; 
-            
             overflow: hidden;
             font-family: 'Arial', sans-serif;
             display: flex;
@@ -29,10 +26,9 @@
         .data-overlay { 
             position: absolute; 
             z-index: 2; 
-            /* AJUSTE PARA BAJAR EL MODAL */
             top: 65vh; 
             transform: translateY(-50%); 
-            width: 85vw; /* Se ajusta al ancho del tótem */
+            width: 85vw; 
             max-width: 320px; 
             background-color: #1a2024; 
             border-radius: 6px; 
@@ -57,13 +53,17 @@
             display: flex; 
             align-items: center; 
             gap: 1.5vw; 
+            width: 35%;
         }
+        .team-container.right { justify-content: flex-end; text-align: right; }
         
-        /* Fuentes elásticas para evitar desbordamientos */
         .team-name { 
             font-size: clamp(12px, 4.5vw, 18px); 
             font-weight: 900; 
             letter-spacing: 0.5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
@@ -74,7 +74,9 @@
             font-size: clamp(24px, 8vw, 32px); 
             font-weight: 900; 
             display: flex; 
+            justify-content: center;
             align-items: center;
+            width: 30%;
         }
         .score-board .separator { margin: 0 1vw; }
 
@@ -110,7 +112,6 @@
             font-weight: 900; 
         }
 
-        /* Estilo para el estado de Partido Finalizado */
         .finished-text { 
             color: #00C800 !important; 
             font-size: clamp(13px, 4.5vw, 16px) !important; 
@@ -138,7 +139,7 @@
             </div>
         </div>
 
-        <h4 class="odds-title" id="titulo-seccion">Sincronizando Mundial...</h4>
+        <h4 class="odds-title" id="titulo-seccion">SINCRONIZANDO MUNDIAL...</h4>
         
         <div class="odds-section" id="seccion-momios">
             <div class="odd-row">
@@ -191,14 +192,15 @@
             const diccionario = {
                 "MÉXICO": "MEX", "MEXICO": "MEX", "SUDÁFRICA": "RSA", "SUDAFRICA": "RSA",
                 "BRASIL": "BRA", "ARGENTINA": "ARG", "ALEMANIA": "GER", "ESPAÑA": "ESP",
-                "INGLATERRA": "ENG", "FRANCIA": "FRA", "ESTADOS UNIDOS": "USA",
+                "INGLATERRA": "ENG", "ENGLAND": "ENG", "FRANCIA": "FRA", "ESTADOS UNIDOS": "USA",
                 "COREA": "KOR", "COREA DEL SUR": "KOR", "SOUTH KOREA": "KOR",
-                "CHEQUIA": "CZE", "REPÚBLICA CHECA": "CZE", "REPUBLICA CHECA": "CZE", "CZECH REPUBLIC": "CZE"
+                "CHEQUIA": "CZE", "REPÚBLICA CHECA": "CZE", "REPUBLICA CHECA": "CZE", "CZECH REPUBLIC": "CZE",
+                "CROACIA": "CRO", "CROATIA": "CRO"
             };
             return diccionario[nombreLimpio] || nombreLimpio.substring(0, 3);
         };
 
-        // ESCÁNER DEL MUNDIAL COMPLETO
+        // ESCÁNER DEL MUNDIAL COMPLETO CON ORDEN CRONOLÓGICO
         async function escanearPartidosMundial() {
             let resultado = { live: [], upcoming: [] };
             try {
@@ -226,11 +228,21 @@
                     const proximos = await fetchCodere(`/leagues/${liga.NodeId}/nonLiveEvents`);
                     if (Array.isArray(proximos)) resultado.upcoming.push(...proximos.map(e => ({...e, isLive: false})));
                 }
+
+                // ORDENAR CRONOLÓGICAMENTE LOS PRÓXIMOS PARTIDOS
+                resultado.upcoming.sort((a, b) => {
+                    let fechaA = new Date(a.StartDate || a.StartTime || 0).getTime();
+                    let fechaB = new Date(b.StartDate || b.StartTime || 0).getTime();
+                    return fechaA - fechaB;
+                });
+
+                // LIMITAR A LOS 3 PARTIDOS MÁS PRÓXIMOS PARA NO ROTAR INFINITAMENTE
+                resultado.upcoming = resultado.upcoming.slice(0, 3);
+
                 return resultado;
             } catch (err) { return resultado; }
         }
 
-        // EXTRACCIÓN DE CUOTAS
         function procesarMomios(arrayEventos) {
             let cuotas = { cuotaL: "N/D", cuotaE: "N/D", cuotaV: "N/D" };
             if (!Array.isArray(arrayEventos) || arrayEventos.length === 0) return cuotas;
@@ -260,7 +272,6 @@
             return cuotas;
         }
 
-        // RENDERIZADO VISUAL DEL PARTIDO EN PANTALLA
         function renderizarPartidoActivo(partido, momios) {
             let equipos = partido.Name ? partido.Name.split(" - ") : ["LOCAL", "VISITA"];
             let local = obtenerAbreviatura(equipos[0]);
@@ -268,7 +279,6 @@
             let scoreL = partido.HomeScore != null ? partido.HomeScore : "0";
             let scoreV = partido.AwayScore != null ? partido.AwayScore : "0";
 
-            // Grabamos en disco para la función de 10 minutos
             const memoria = { local, visita, scoreL, scoreV };
             localStorage.setItem('ultimoPartidoCodere', JSON.stringify(memoria));
             localStorage.setItem('ultimoPartidoCodere_wasLive', partido.isLive ? "true" : "false");
@@ -292,7 +302,6 @@
             document.getElementById('contenedor-marcador').style.marginBottom = "3vw";
         }
 
-        // RENDERIZADO VISUAL DE MARCADOR FINAL (SIN APUESTAS)
         function renderizarPartidoFinalizado(local, visita, scoreL, scoreV) {
             document.getElementById('equipo-local').innerText = local;
             document.getElementById('equipo-visita').innerText = visita;
@@ -310,35 +319,29 @@
             titulo.classList.add('finished-text');
         }
 
-        // CEREBRO DEL SISTEMA Y REGLA DE 10 MINUTOS
         async function cicloPrincipal() {
             if (actualizacionEnProgreso) return;
             actualizacionEnProgreso = true;
 
             try {
-                // 1. Verificar si estamos dentro del bloqueo de 10 minutos post-partido
                 const horaFinalStr = localStorage.getItem('horaFinalPartido');
                 if (horaFinalStr) {
                     const tiempoPasado = Date.now() - parseInt(horaFinalStr);
-                    if (tiempoPasado < 600000) { // 600,000 milisegundos = 10 minutos
+                    if (tiempoPasado < 600000) { 
                         const memo = JSON.parse(localStorage.getItem('ultimoPartidoCodere'));
                         if (memo) renderizarPartidoFinalizado(memo.local, memo.visita, memo.scoreL, memo.scoreV);
                         actualizacionEnProgreso = false;
-                        return; // Corta la ejecución, deja la pantalla congelada
+                        return; 
                     } else {
-                        // Pasaron 10 min, liberamos el candado
                         localStorage.removeItem('horaFinalPartido'); 
                     }
                 }
 
-                // 2. Extraer datos frescos
                 const partidos = await escanearPartidosMundial();
 
-                // 3. Analizar estado de la Copa
                 if (partidos.live.length > 0) {
-                    // HAY PARTIDO EN VIVO
                     modoCarrusel = false;
-                    localStorage.removeItem('horaFinalPartido'); // Limpia candados viejos
+                    localStorage.removeItem('horaFinalPartido'); 
 
                     const partidoVivo = partidos.live[0];
                     const detalles = await fetchCodere(`/events/${partidoVivo.NodeId}`);
@@ -346,8 +349,6 @@
                     renderizarPartidoActivo(partidoVivo, momios);
 
                 } else if (partidos.upcoming.length > 0) {
-                    // HAY PARTIDOS PROGRAMADOS
-                    // Verificar si un partido acaba de terminar
                     const ultimoLive = localStorage.getItem('ultimoPartidoCodere_wasLive');
                     if (ultimoLive === "true") {
                         localStorage.setItem('horaFinalPartido', Date.now().toString());
@@ -358,7 +359,6 @@
                         return;
                     }
 
-                    // MODO ROTACIÓN: Carrusel activado
                     modoCarrusel = true;
                     partidosProgramados = partidos.upcoming;
                     
@@ -370,7 +370,6 @@
                     renderizarPartidoActivo(partidoPre, momios);
 
                 } else {
-                    // NO HAY PARTIDOS EN LA API EN LO ABSOLUTO
                     const ultimoLive = localStorage.getItem('ultimoPartidoCodere_wasLive');
                     if (ultimoLive === "true") {
                         localStorage.setItem('horaFinalPartido', Date.now().toString());
@@ -386,17 +385,15 @@
             }
         }
 
-        // INICIAR CARRUSEL DE 15 SEGUNDOS (Solo se ejecuta si no hay partido en vivo)
         function iniciarCarrusel() {
             setInterval(() => {
                 if (modoCarrusel && partidosProgramados.length > 1) {
                     indicePartidoActual = (indicePartidoActual + 1) % partidosProgramados.length;
-                    cicloPrincipal(); // Fuerza el cambio de vista
+                    cicloPrincipal(); 
                 }
             }, 15000);
         }
 
-        // ARRANQUE (Consultas cada 30 segundos)
         cicloPrincipal();
         setInterval(cicloPrincipal, 30000);
         iniciarCarrusel();
