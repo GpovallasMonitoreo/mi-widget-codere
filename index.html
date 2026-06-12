@@ -3,233 +3,373 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tablero Codere - MEX vs RSA En Vivo</title>
+    <title>Tablero Codere Mundial 2026 - Automatización Total DOOH</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Arial', sans-serif; }
-        body { background-color: #111; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
-
-        .pantalla-display { 
-            position: relative; 
-            width: 1680px; 
-            height: 540px; 
-            background-color: #000; 
-            overflow: hidden; 
-            box-shadow: 0px 0px 20px rgba(0,0,0,0.5); 
+        /* 1. EL FONDO: Forzado al 100% para evitar cortes y mosaicos en Broadsign */
+        html, body {
+            margin: 0; 
+            padding: 0;
+            width: 100vw; 
+            height: 100vh;
+            background-color: #0d1418;
+            background-image: url('https://jxwdncxtnhmrufvdxuti.supabase.co/storage/v1/object/public/banners-publicos/WhatsApp%20Image%202026-06-05%20at%2012.17.23%20PM.jpeg');
+            background-size: 100% 100%; 
+            background-repeat: no-repeat; 
+            background-position: center; 
+            overflow: hidden;
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
         }
-        .fondo-img { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1; }
 
-        /* Widget posicionado a la izquierda */
+        /* 2. EL MODAL GIGANTE OPTIMIZADO */
         .data-overlay { 
             position: absolute; 
             z-index: 2; 
-            top: 50%; 
-            left: 36%; 
+            top: 65vh; 
             transform: translateY(-50%); 
-            width: 480px; 
-            background-color: #171f24; 
-            border-radius: 12px; 
-            padding: 30px; 
+            width: 92vw; 
+            max-width: 440px; 
+            background-color: #1a2024; 
+            border-radius: 8px; 
+            padding: 5vw; 
             color: #FFF; 
+            box-shadow: 0px 10px 25px rgba(0,0,0,0.8);
+            transition: all 0.4s ease-in-out; 
         }
 
+        /* Sección del Marcador */
         .match-info { 
             display: flex; 
-            justify-content: space-between; 
+            justify-content: center; 
             align-items: center; 
-            border-bottom: 2px solid #7bc100; 
-            padding-bottom: 20px; 
-            margin-bottom: 25px; 
+            gap: 3vw; 
+            border-bottom: 2px solid #3d4a22; 
+            padding-bottom: 3.5vw; 
+            margin-bottom: 3.5vw; 
+            transition: all 0.3s ease;
         }
         
-        /* Aumento de tamaño en nombres de equipo */
-        .team { display: flex; align-items: center; font-size: 24px; font-weight: bold; text-transform: uppercase; width: 40%; }
-        .team.right { justify-content: flex-end; text-align: right; }
+        .team-container { 
+            display: flex; 
+            align-items: center; 
+            gap: 2vw; 
+            width: 35%;
+        }
+        .team-container.right { justify-content: flex-end; text-align: right; }
         
-        .dot { width: 16px; height: 16px; border-radius: 50%; margin: 0 10px; flex-shrink: 0; }
-        .dot-local { background-color: #009900; } 
-        .dot-visita { background-color: #FFD700; } 
-        
-        /* Aumento de tamaño en marcador */
-        .score-board { font-size: 52px; font-weight: 800; display: flex; justify-content: center; width: 20%; color: #FFF; }
-        .score-board .separator { margin: 0 10px; color: #FFF; }
+        .team-name { 
+            font-size: clamp(16px, 6vw, 24px); 
+            font-weight: 900; 
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
 
-        .odds-section { display: flex; flex-direction: column; }
-        .odds-title { text-align: center; font-size: 18px; margin-bottom: 20px; color: #FFF; font-weight: bold; text-transform: uppercase; }
-        
-        /* Aumento de tamaño en las opciones de apuesta */
+        .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .dot-local { background-color: #00C800; } 
+        .dot-visita { background-color: #FFD700; } 
+
+        /* Marcador Fuerte */
+        .score-board { 
+            font-size: clamp(32px, 10vw, 44px); 
+            font-weight: 900; 
+            display: flex; 
+            justify-content: center;
+            align-items: center;
+            width: 30%;
+        }
+        .score-board .separator { margin: 0 1.5vw; }
+
+        /* Sección de Momios */
+        .odds-title { 
+            text-align: center; 
+            font-size: clamp(11px, 4vw, 15px); 
+            font-weight: 800;
+            margin-bottom: 4vw; 
+            letter-spacing: 0.5px; 
+            text-transform: uppercase;
+        }
+
         .odd-row { 
             display: flex; 
             justify-content: space-between; 
-            border-bottom: 1px solid #7bc100; 
-            padding: 15px 0; 
-            font-size: 20px; 
-            font-weight: bold; 
+            align-items: center;
+            border-bottom: 2px solid #3d4a22; 
+            padding: 3.5vw 0; 
         }
         .odd-row:last-child { border-bottom: none; padding-bottom: 0; }
-        .odd-value { color: #FFF; font-size: 28px; }
+
+        .odd-label { font-size: clamp(14px, 5vw, 18px); font-weight: bold; text-transform: uppercase;}
+        .odd-value { font-size: clamp(16px, 5.5vw, 22px); font-weight: 900; color: #FFF; }
+        
+        /* Estado Finalizado */
+        .finished-text { color: #00C800 !important; font-size: clamp(14px, 5vw, 18px) !important; margin: 0 !important; padding-top: 1vw;}
     </style>
 </head>
 <body>
 
-    <div class="pantalla-display">
-        <img src="https://jxwdncxtnhmrufvdxuti.supabase.co/storage/v1/object/public/banners-publicos/WhatsApp%20Image%202026-06-11%20at%209.23.02%20AM.jpeg" alt="Fondo Promocional" class="fondo-img">
-
-        <div class="data-overlay" id="widget-datos">
-            <div class="match-info">
-                <div class="team"> 
-                    <span class="dot dot-local"></span>
-                    <span id="equipo-local">MEX</span>
-                </div>
-                <div class="score-board">
-                    <span id="marcador-local">0</span>
-                    <span class="separator">-</span>
-                    <span id="marcador-visita">0</span>
-                </div>
-                <div class="team right">
-                    <span id="equipo-visita">RSA</span>
-                    <span class="dot dot-visita"></span>
-                </div>
+    <div class="data-overlay" id="widget-datos">
+        <div class="match-info" id="contenedor-marcador">
+            <div class="team-container">
+                <span class="dot dot-local"></span>
+                <span class="team-name" id="equipo-local">---</span>
             </div>
+            <div class="score-board">
+                <span id="marcador-local">0</span>
+                <span class="separator">-</span>
+                <span id="marcador-visita">0</span>
+            </div>
+            <div class="team-container right">
+                <span class="team-name" id="equipo-visita">---</span>
+                <span class="dot dot-visita"></span>
+            </div>
+        </div>
 
-            <div class="odds-section">
-                <h4 class="odds-title">OPCIONES DE APUESTA</h4>
-                <div class="odd-row">
-                    <span id="label-gana-local">GANA MEX</span>
-                    <span class="odd-value" id="cuota-local">--</span>
-                </div>
-                <div class="odd-row">
-                    <span id="label-empate">EMPATE</span>
-                    <span class="odd-value" id="cuota-empate">--</span>
-                </div>
-                <div class="odd-row">
-                    <span id="label-gana-visita">GANA RSA</span>
-                    <span class="odd-value" id="cuota-visita">--</span>
-                </div>
+        <h4 class="odds-title" id="titulo-seccion">Sincronizando...</h4>
+        
+        <div class="odds-section" id="seccion-momios">
+            <div class="odd-row">
+                <span class="odd-label" id="label-gana-local">GANA LOCAL</span>
+                <span class="odd-value" id="cuota-local">--</span>
+            </div>
+            <div class="odd-row">
+                <span class="odd-label">EMPATE</span>
+                <span class="odd-value" id="cuota-empate">--</span>
+            </div>
+            <div class="odd-row">
+                <span class="odd-label" id="label-gana-visita">GANA VISITA</span>
+                <span class="odd-value" id="cuota-visita">--</span>
             </div>
         </div>
     </div>
 
     <script>
-        // EL ID EXACTO DEL PARTIDO DE MÉXICO VS SUDÁFRICA
-        const MEXICO_EVENT_ID = "13177428310"; 
         let actualizacionEnProgreso = false;
+        let partidosDisponibles = [];
+        let indicePartidoActual = 0;
+        let intervaloRotacion = null;
 
         async function fetchCodere(endpoint) {
             try {
                 const url = `/api/proxy?endpoint=${encodeURIComponent(endpoint)}`;
                 const response = await fetch(url);
-                if (response.status === 204) return null;
+                if (response.status === 404 || response.status === 204) return null;
                 const data = await response.json();
-                if (!response.ok) throw new Error(`Status: ${response.status}`);
+                if (!response.ok) return null;
                 return data;
-            } catch (error) {
-                console.error("Error en fetchCodere:", error);
-                return null;
-            }
+            } catch (error) { return null; }
         }
 
-        // Formateador de momios (Maneja decimales y formato americano como el diseño visual)
         const formatMomio = (val) => {
             if (val == null || val === "" || val === "-") return "N/D";
             const strVal = val.toString();
-            
             if (strVal.includes('.')) {
                 const num = Number(val);
                 return !isNaN(num) ? num.toFixed(2) : strVal;
             }
-            
             const num = Number(val);
             if (isNaN(num)) return val;
             return num > 0 ? `+${num}` : num.toString();
         };
 
-        function procesarDataDelPartido(arrayEventos) {
-            if (!Array.isArray(arrayEventos) || arrayEventos.length === 0) return null;
-            
-            let dataPartido = {
-                marcadorLocal: 0,
-                marcadorVisita: 0,
-                cuotaL: "N/D",
-                cuotaE: "N/D",
-                cuotaV: "N/D"
+        const obtenerAbreviatura = (nombre) => {
+            if (!nombre) return "---";
+            const nombreLimpio = nombre.trim().toUpperCase();
+            const diccionario = {
+                "MÉXICO": "MEX", "MEXICO": "MEX", "SUDÁFRICA": "RSA", "SUDAFRICA": "RSA",
+                "BRASIL": "BRA", "ARGENTINA": "ARG", "ALEMANIA": "GER", "ESPAÑA": "ESP",
+                "INGLATERRA": "ENG", "FRANCIA": "FRA", "ESTADOS UNIDOS": "USA",
+                "COREA": "KOR", "COREA DEL SUR": "KOR", "SOUTH KOREA": "KOR",
+                "CHEQUIA": "CZE", "REPÚBLICA CHECA": "CZE", "REPUBLICA CHECA": "CZE", "CZECH REPUBLIC": "CZE"
             };
+            return diccionario[nombreLimpio] || nombreLimpio.substring(0, 3);
+        };
 
-            const juegos = [];
-            const resultados = [];
+        // ESCÁNER TOTAL DE LA COPA DEL MUNDO
+        async function escanearPartidosMundial() {
+            try {
+                const sports = await fetchCodere('/sports');
+                if (!sports) return [];
+                const soccer = sports.find(s => s.Name === 'Fútbol' || s.Name === 'Soccer');
+                if (!soccer) return [];
 
-            for (let item of arrayEventos) {
-                if (!item.Value) continue;
-                if (item.Value.Type === "Event" && item.Value.NodeId === MEXICO_EVENT_ID) {
-                    dataPartido.marcadorLocal = item.Value.HomeScore != null ? item.Value.HomeScore : 0;
-                    dataPartido.marcadorVisita = item.Value.AwayScore != null ? item.Value.AwayScore : 0;
-                } else if (item.Value.Type === "Game") {
-                    juegos.push(item.Value);
-                } else if (item.Value.Type === "Result") {
-                    resultados.push(item.Value);
+                const leaguesData = await fetchCodere(`/sports/${soccer.NodeId}/leagues`);
+                if (!leaguesData) return [];
+                
+                let ligas = [];
+                leaguesData.forEach(country => {
+                    const countryLeagues = country.Leagues || country.leagues || country.Items || [];
+                    if (Array.isArray(countryLeagues)) ligas.push(...countryLeagues);
+                    else if (country.NodeId) ligas.push(country);
+                });
+
+                const ligasMundial = ligas.filter(l => l.Name && (l.Name.toUpperCase().includes('MUNDIAL') || l.Name.toUpperCase().includes('WORLD CUP')));
+                
+                let partidosLive = [];
+                let partidosPre = [];
+
+                for (let liga of ligasMundial) {
+                    const enVivo = await fetchCodere(`/leagues/${liga.NodeId}/liveEvents`);
+                    if (Array.isArray(enVivo)) partidosLive.push(...enVivo.map(e => ({...e, isLive: true})));
+
+                    const proximos = await fetchCodere(`/leagues/${liga.NodeId}/nonLiveEvents`);
+                    if (Array.isArray(proximos)) partidosPre.push(...proximos.map(e => ({...e, isLive: false})));
                 }
-            }
 
-            // Buscar mercado principal de Resultado 1X2
-            let mercadoPrincipal = juegos.find(j => j.GameType === 1 || j.GameType === 97 || j.GameType === 159);
+                // Si hay un partido EN VIVO rodando, ignoramos todo lo demás y dominamos la pantalla
+                if (partidosLive.length > 0) {
+                    // Borramos marcas de tiempo de finalización si empieza un juego nuevo
+                    localStorage.removeItem('horaFinalPartido'); 
+                    return [partidosLive[0]]; 
+                }
+
+                return partidosPre; // De lo contrario, regresamos la lista de próximos juegos
+            } catch (err) { return []; }
+        }
+
+        function procesarMomios(arrayEventos) {
+            let cuotas = { cuotaL: "N/D", cuotaE: "N/D", cuotaV: "N/D" };
+            if (!Array.isArray(arrayEventos) || arrayEventos.length === 0) return cuotas;
             
-            if (!mercadoPrincipal) {
-                mercadoPrincipal = juegos.find(j => j.NodeName && j.NodeName.toUpperCase().includes("RESULTADO"));
-            }
+            const juegos = arrayEventos.filter(i => i.Value && i.Value.Type === "Game").map(i => i.Value);
+            const resultados = arrayEventos.filter(i => i.Value && i.Value.Type === "Result").map(i => i.Value);
+
+            let mercadoPrincipal = juegos.find(j => j.GameType === 1 || j.GameType === 97 || j.GameType === 159) || 
+                                   juegos.find(j => j.NodeName && j.NodeName.toUpperCase().includes("RESULTADO"));
 
             if (mercadoPrincipal) {
                 const resultadosMercado = resultados.filter(r => r.ParentNodeId === mercadoPrincipal.NodeId);
-                
-                // Asegurar orden Local, Empate, Visita
                 resultadosMercado.sort((a, b) => {
-                    let orderA = 99, orderB = 99;
                     try {
-                        orderA = parseInt(a.AdditionalValues.LocalizedValues.find(v => v.Key === "ParticipantOrder").Value);
-                        orderB = parseInt(b.AdditionalValues.LocalizedValues.find(v => v.Key === "ParticipantOrder").Value);
-                    } catch(e){}
-                    return orderA - orderB;
+                        let orderA = parseInt(a.AdditionalValues.LocalizedValues.find(v => v.Key === "ParticipantOrder").Value);
+                        let orderB = parseInt(b.AdditionalValues.LocalizedValues.find(v => v.Key === "ParticipantOrder").Value);
+                        return orderA - orderB;
+                    } catch(e){ return 0; }
                 });
 
                 if (resultadosMercado.length >= 3) {
-                    // Intenta tomar AmericanOdds si existen, de lo contrario toma Odd/Price
-                    let cL = resultadosMercado[0].AmericanOdds || resultadosMercado[0].Odd || resultadosMercado[0].Price || "N/D";
-                    let cE = resultadosMercado[1].AmericanOdds || resultadosMercado[1].Odd || resultadosMercado[1].Price || "N/D";
-                    let cV = resultadosMercado[2].AmericanOdds || resultadosMercado[2].Odd || resultadosMercado[2].Price || "N/D";
-
-                    dataPartido.cuotaL = formatMomio(cL);
-                    dataPartido.cuotaE = formatMomio(cE);
-                    dataPartido.cuotaV = formatMomio(cV);
+                    cuotas.cuotaL = formatMomio(resultadosMercado[0].AmericanOdds || resultadosMercado[0].Odd || resultadosMercado[0].Price);
+                    cuotas.cuotaE = formatMomio(resultadosMercado[1].AmericanOdds || resultadosMercado[1].Odd || resultadosMercado[1].Price);
+                    cuotas.cuotaV = formatMomio(resultadosMercado[2].AmericanOdds || resultadosMercado[2].Odd || resultadosMercado[2].Price);
                 }
             }
-
-            return dataPartido;
+            return cuotas;
         }
 
-        async function actualizarDatosMexico() {
+        function renderizarPartidoActivo(partido, momios) {
+            let equipos = partido.Name ? partido.Name.split(" - ") : ["LOCAL", "VISITA"];
+            let local = obtenerAbreviatura(equipos[0]);
+            let visita = obtenerAbreviatura(equipos[1]);
+            let scoreL = partido.HomeScore != null ? partido.HomeScore : "0";
+            let scoreV = partido.AwayScore != null ? partido.AwayScore : "0";
+
+            // Guardamos rastro del partido activo por si en el próximo bloque se cae (termina)
+            const memoria = { local, visita, scoreL, scoreV };
+            localStorage.setItem('ultimoPartidoCodere', JSON.stringify(memoria));
+
+            document.getElementById('equipo-local').innerText = local;
+            document.getElementById('equipo-visita').innerText = visita;
+            document.getElementById('marcador-local').innerText = scoreL;
+            document.getElementById('marcador-visita').innerText = scoreV;
+
+            document.getElementById('label-gana-local').innerText = `GANA ${local}`;
+            document.getElementById('label-gana-visita').innerText = `GANA ${visita}`;
+
+            document.getElementById('cuota-local').innerText = momios.cuotaL;
+            document.getElementById('cuota-empate').innerText = momios.cuotaE;
+            document.getElementById('cuota-visita').innerText = momios.cuotaV;
+
+            document.getElementById('titulo-seccion').innerText = partido.isLive ? "MERCADO EN VIVO" : "PRÓXIMO PARTIDO";
+            document.getElementById('titulo-seccion').classList.remove('finished-text');
+            document.getElementById('titulo-seccion').style.color = partido.isLive ? "#FF0000" : "#00E5FF";
+            
+            document.getElementById('seccion-momios').style.display = 'block';
+            document.getElementById('contenedor-marcador').style.borderBottom = "2px solid #3d4a22";
+            document.getElementById('contenedor-marcador').style.paddingBottom = "3.5vw";
+        }
+
+        function renderizarPartidoFinalizado(local, visita, scoreL, scoreV) {
+            document.getElementById('equipo-local').innerText = local;
+            document.getElementById('equipo-visita').innerText = visita;
+            document.getElementById('marcador-local').innerText = scoreL;
+            document.getElementById('marcador-visita').innerText = scoreV;
+
+            document.getElementById('contenedor-marcador').style.borderBottom = "none";
+            document.getElementById('contenedor-marcador').style.marginBottom = "0";
+            document.getElementById('contenedor-marcador').style.paddingBottom = "0";
+            
+            document.getElementById('seccion-momios').style.display = 'none';
+            
+            const titulo = document.getElementById('titulo-seccion');
+            titulo.innerText = "PARTIDO FINALIZADO";
+            titulo.style.color = "#00C800";
+            titulo.classList.add('finished-text');
+        }
+
+        // CONTROLADOR DE ROTACIÓN Y ACTUALIZACIÓN
+        async function actualizarWidget() {
             if (actualizacionEnProgreso) return;
             actualizacionEnProgreso = true;
 
-            try {
-                const arrayEventos = await fetchCodere(`/events/${MEXICO_EVENT_ID}`);
-                const datos = procesarDataDelPartido(arrayEventos);
-
-                if (datos) {
-                    document.getElementById('marcador-local').innerText = datos.marcadorLocal;
-                    document.getElementById('marcador-visita').innerText = datos.marcadorVisita;
-                    
-                    document.getElementById('cuota-local').innerText = datos.cuotaL;
-                    document.getElementById('cuota-empate').innerText = datos.cuotaE;
-                    document.getElementById('cuota-visita').innerText = datos.cuotaV;
+            // REGLA DE SEGURIDAD DE LOS 10 MINUTOS
+            const horaFinal = localStorage.getItem('horaFinalPartido');
+            if (horaFinal) {
+                const tiempoTranscurrido = Date.now() - parseInt(horaFinal);
+                if (tiempoTranscurrido < 600000) { # 600,000 ms = 10 minutos
+                    const memo = JSON.parse(localStorage.getItem('ultimoPartidoCodere'));
+                    if (memo) {
+                        renderizarPartidoFinalizado(memo.local, memo.visita, memo.scoreL, memo.scoreV);
+                        actualizacionEnProgreso = false;
+                        return;
+                    }
+                } else {
+                    // Pasaron los 10 minutos, liberamos la pantalla para el carrusel
+                    localStorage.removeItem('horaFinalPartido');
                 }
-            } catch (error) {
-                console.error("Error al actualizar datos: ", error);
-            } finally {
-                actualizacionEnProgreso = false;
             }
+
+            partidosDisponibles = await escanearPartidosMundial();
+
+            if (partidosDisponibles.length > 0) {
+                // Si el índice se sale del rango por un cambio de lista, lo reseteamos
+                if (indicePartidoActual >= partidosDisponibles.length) indicePartidoActual = 0;
+                
+                const partido = partidosDisponibles[indicePartidoActual];
+                const detalles = await fetchCodere(`/events/${partido.NodeId}`);
+                const momios = procesarMomios(detalles);
+                
+                renderizarPartidoActivo(partido, momios);
+            } else {
+                // No hay nada en el feed: Activamos bloqueo de 10 min si veníamos de un partido activo
+                const yaHabiaPartido = localStorage.getItem('ultimoPartidoCodere');
+                if (yaHabiaPartido && !horaFinal) {
+                    localStorage.setItem('horaFinalPartido', Date.now().toString());
+                    const memo = JSON.parse(yaHabiaPartido);
+                    renderizarPartidoFinalizado(memo.local, memo.visita, memo.scoreL, memo.scoreV);
+                } else {
+                    // Respaldo total si no hay nada en lo absoluto
+                    renderizarPartidoFinalizado("MEX", "RSA", 2, 0);
+                }
+            }
+            actualizacionEnProgreso = false;
         }
 
-        // Carga inicial y ciclo de 30 segundos
-        actualizarDatosMexico();
-        setInterval(actualizarDatosMexico, 30000);
+        // MOTOR DEL CARRUSEL (RUGIRÁ CADA 15 SEGUNDOS SI HAY MÁS DE UN PARTIDO PRE-MATCH)
+        function iniciarCarrusel() {
+            setInterval(() => {
+                if (partidosDisponibles.length > 1 && !partidosDisponibles[0].isLive) {
+                    indicePartidoActual = (indicePartidoActual + 1) % partidosDisponibles.length;
+                    actualizarWidget();
+                }
+            }, 15000); // 15 segundos entre cambio de partido programado
+        }
+
+        // Ciclo principal de llamadas a Vercel (Cada 30 segundos)
+        actualizarWidget();
+        setInterval(actualizarWidget, 30000);
+        iniciarCarrusel();
     </script>
 </body>
 </html>
